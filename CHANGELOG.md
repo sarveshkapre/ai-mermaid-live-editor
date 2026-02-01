@@ -6,4 +6,4 @@
 - Commit timeline, share links, SVG/PNG export
 - UX polish: shortcuts dialog (`?`), copy-link feedback, safer clipboard fallback
 - Reliability: diff preview stays synced with editor updates
-
+- Reliability: draft autosave with restore/clear actions

@@ -5,6 +5,7 @@
 - Improved “Copy share link” reliability with feedback, clipboard fallback, and URL hash sync without history spam.
 - Kept diff preview in sync as the editor content changes.
 - Added a smoke test to ensure `index.html` includes required element IDs.
+- Added draft autosave plus restore/clear controls to prevent refresh data loss.
 
 ## How to verify
 ```bash
@@ -14,4 +15,3 @@ make check
 ## PR
 - If `gh` is installed and authenticated: create a PR from your branch and paste the link here.
 - Otherwise: `git push -u origin <branch>` then open a PR in GitHub with the commit message as the title.
-

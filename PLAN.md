@@ -14,6 +14,7 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Shortcuts dialog (`?` to open) + accessible dialog styling
 - Share-link copy feedback + safer clipboard fallback + URL hash sync via `replaceState`
 - Diff preview stays in sync with editor changes
+- Local draft autosave + restore/clear actions (prevents accidental refresh data loss)
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 

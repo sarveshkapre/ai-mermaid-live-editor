@@ -13,6 +13,7 @@ Split-screen Mermaid editor with live rendering plus a patch-driven AI panel for
 - Commit history with restore
 - Shareable links (URL hash)
 - SVG/PNG export
+- Draft autosave with restore/clear
 - Dark mode and keyboard shortcuts
 
 ## Quickstart

@@ -27,6 +27,8 @@ describe('index.html wiring', () => {
       'reset',
       'clear-history',
       'download-history',
+      'restore-draft',
+      'clear-draft',
     ];
 
     requiredIds.forEach((id) => {
@@ -34,4 +36,3 @@ describe('index.html wiring', () => {
     });
   });
 });
-

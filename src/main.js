@@ -1,5 +1,6 @@
 import mermaid from 'mermaid';
 import { diffLines } from './lib/diff.js';
+import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
 
@@ -73,6 +74,10 @@ const resetBtn = byId('reset');
 const clearHistoryBtn = byId('clear-history');
 /** @type {HTMLButtonElement} */
 const downloadHistoryBtn = byId('download-history');
+/** @type {HTMLButtonElement} */
+const restoreDraftBtn = byId('restore-draft');
+/** @type {HTMLButtonElement} */
+const clearDraftBtn = byId('clear-draft');
 
 let lastSvg = '';
 /** @type {number | null} */
@@ -81,6 +86,8 @@ let renderTimer = null;
 let toastTimer = null;
 /** @type {HTMLElement | null} */
 let lastFocusedBeforeDialog = null;
+/** @type {number | null} */
+let lastDraftSavedAt = null;
 
 mermaid.initialize({
   startOnLoad: false,
@@ -109,7 +116,8 @@ function updateStats() {
   const text = editor.value;
   const lines = text.split('\n').length;
   const chars = text.length;
-  stats.textContent = `${lines} lines · ${chars} chars`;
+  const draftLabel = lastDraftSavedAt ? ' · Draft saved' : '';
+  stats.textContent = `${lines} lines · ${chars} chars${draftLabel}`;
 }
 
 async function renderMermaid() {
@@ -140,6 +148,17 @@ function scheduleRender() {
     renderMermaid();
     updateStats();
     updateDiff();
+    const trimmed = editor.value.trim();
+    if (!trimmed || trimmed === DEFAULT_DIAGRAM.trim()) {
+      clearDraft();
+      lastDraftSavedAt = null;
+      updateStats();
+      return;
+    }
+    if (saveDraft(trimmed)) {
+      lastDraftSavedAt = Date.now();
+    }
+    updateStats();
   }, 200);
 }
 
@@ -283,6 +302,11 @@ async function copyShareLink() {
   const url = `${window.location.origin}${window.location.pathname}#${hash}`;
   window.history.replaceState(null, '', `#${hash}`);
   try {
+    const trimmed = editor.value.trim();
+    if (trimmed && trimmed !== DEFAULT_DIAGRAM.trim() && saveDraft(trimmed)) {
+      lastDraftSavedAt = Date.now();
+    }
+    updateStats();
     await writeClipboardText(url);
     showToast('Share link copied.');
   } catch {
@@ -367,7 +391,20 @@ function init() {
 
   const hash = window.location.hash.replace('#', '');
   const decoded = hash ? decodeHash(hash) : null;
-  editor.value = decoded || DEFAULT_DIAGRAM.trim();
+  if (decoded) {
+    editor.value = decoded;
+  } else {
+    const draft = loadDraft();
+    const now = Date.now();
+    const maxAgeMs = 1000 * 60 * 60 * 24 * 7;
+    if (draft && now - draft.updatedAt <= maxAgeMs) {
+      editor.value = draft.diagram;
+      lastDraftSavedAt = draft.updatedAt;
+      queueMicrotask(() => showToast('Restored last draft.'));
+    } else {
+      editor.value = DEFAULT_DIAGRAM.trim();
+    }
+  }
 
   updateStats();
   renderMermaid();
@@ -397,6 +434,27 @@ clearHistoryBtn.addEventListener('click', () => {
 });
 
 downloadHistoryBtn.addEventListener('click', downloadHistory);
+
+restoreDraftBtn.addEventListener('click', () => {
+  const draft = loadDraft();
+  if (!draft) {
+    showToast('No draft found.');
+    return;
+  }
+  if (!confirm('Restore the last draft? This will replace the editor content.')) return;
+  editor.value = draft.diagram;
+  lastDraftSavedAt = draft.updatedAt;
+  scheduleRender();
+  showToast('Draft restored.');
+});
+
+clearDraftBtn.addEventListener('click', () => {
+  if (!confirm('Clear the saved draft?')) return;
+  clearDraft();
+  lastDraftSavedAt = null;
+  updateStats();
+  showToast('Draft cleared.');
+});
 
 copyLink.addEventListener('click', copyShareLink);
 
