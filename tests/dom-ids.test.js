@@ -33,6 +33,8 @@ describe('index.html wiring', () => {
       'clear-draft',
       'download-source',
       'export-scale',
+      'export-width',
+      'export-width-custom',
       'export-transparent',
       'export-svg-scale',
       'export-svg-inline',

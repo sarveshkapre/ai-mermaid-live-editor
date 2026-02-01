@@ -11,3 +11,4 @@
 - UX: PNG export controls for scale + transparency
 - Reliability: large diagram guardrails (manual render, diff skip)
 - UX: SVG export controls for scale + inline styles
+- UX: export sizing presets with custom width

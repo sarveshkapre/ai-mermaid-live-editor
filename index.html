@@ -106,6 +106,20 @@
                   <option value="3">3x</option>
                 </select>
               </label>
+              <label class="field">
+                <span>Export width</span>
+                <select id="export-width">
+                  <option value="auto">Auto</option>
+                  <option value="640">Small (640px)</option>
+                  <option value="960">Medium (960px)</option>
+                  <option value="1280">Large (1280px)</option>
+                  <option value="custom">Custom…</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Custom width</span>
+                <input id="export-width-custom" type="number" min="200" max="4000" step="50" placeholder="e.g. 1440" />
+              </label>
               <label class="field checkbox">
                 <input id="export-transparent" type="checkbox" />
                 <span>Transparent PNG</span>

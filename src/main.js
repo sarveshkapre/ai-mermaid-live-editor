@@ -82,6 +82,10 @@ const downloadHistoryBtn = byId('download-history');
 const downloadSourceBtn = byId('download-source');
 /** @type {HTMLSelectElement} */
 const exportScaleSelect = byId('export-scale');
+/** @type {HTMLSelectElement} */
+const exportWidthSelect = byId('export-width');
+/** @type {HTMLInputElement} */
+const exportWidthCustomInput = byId('export-width-custom');
 /** @type {HTMLInputElement} */
 const exportTransparentToggle = byId('export-transparent');
 /** @type {HTMLSelectElement} */
@@ -346,7 +350,8 @@ async function copyShareLink() {
 
 function exportSvg() {
   if (!lastSvg) return;
-  const scaled = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
+  const base = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
+  const scaled = applySvgWidth(base, resolveExportWidth());
   const output = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
   const blob = new Blob([output], { type: 'image/svg+xml' });
   downloadBlob(blob, 'diagram.svg');
@@ -360,8 +365,11 @@ function exportPng() {
   img.onload = () => {
     const canvas = document.createElement('canvas');
     const scale = Number(exportScaleSelect.value) || 1;
-    canvas.width = Math.max(1, Math.round(img.width * scale));
-    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const targetWidth = resolveExportWidth();
+    const width = targetWidth ? targetWidth : img.width * scale;
+    const ratio = img.height / img.width || 1;
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(width * ratio));
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     if (!exportTransparentToggle.checked) {
@@ -385,6 +393,20 @@ function downloadHistory() {
   const data = loadHistory();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   downloadBlob(blob, 'mermaid-history.json');
+}
+
+function resolveExportWidth() {
+  const preset = exportWidthSelect.value;
+  exportWidthCustomInput.disabled = preset !== 'custom';
+  if (preset === 'auto') return null;
+  if (preset === 'custom') {
+    const value = Number(exportWidthCustomInput.value);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return Math.min(4000, Math.max(200, value));
+  }
+  const value = Number(preset);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
 }
 
 /**
@@ -415,6 +437,28 @@ function applySvgScale(svg, scale) {
     }
   }
   return next;
+}
+
+/**
+ * @param {string} svg
+ * @param {number | null} width
+ */
+function applySvgWidth(svg, width) {
+  if (!width || !svg.includes('<svg')) return svg;
+  const widthMatch = svg.match(/width="([\d.]+)(px)?"/);
+  const heightMatch = svg.match(/height="([\d.]+)(px)?"/);
+  if (widthMatch && heightMatch) {
+    const currentWidth = Number(widthMatch[1]);
+    const currentHeight = Number(heightMatch[1]);
+    if (!Number.isFinite(currentWidth) || !Number.isFinite(currentHeight) || currentWidth <= 0) return svg;
+    const ratio = currentHeight / currentWidth;
+    const nextWidth = width;
+    const nextHeight = Math.round(width * ratio);
+    let next = svg.replace(widthMatch[0], `width="${nextWidth}"`);
+    next = next.replace(heightMatch[0], `height="${nextHeight}"`);
+    return next;
+  }
+  return svg;
 }
 
 /**
@@ -524,6 +568,12 @@ function init() {
         if (typeof prefs.scale === 'number') {
           exportScaleSelect.value = String(prefs.scale);
         }
+        if (typeof prefs.width === 'string') {
+          exportWidthSelect.value = prefs.width;
+        }
+        if (typeof prefs.customWidth === 'number') {
+          exportWidthCustomInput.value = String(prefs.customWidth);
+        }
         if (typeof prefs.transparent === 'boolean') {
           exportTransparentToggle.checked = prefs.transparent;
         }
@@ -538,6 +588,7 @@ function init() {
       localStorage.removeItem(EXPORT_PREFS_KEY);
     }
   }
+  resolveExportWidth();
 
   const storedTheme = localStorage.getItem('theme');
   const prefersDark =
@@ -606,10 +657,17 @@ function persistExportPrefs() {
   const transparent = exportTransparentToggle.checked;
   const svgScale = Number(exportSvgScaleSelect.value) || 1;
   const svgInline = exportSvgInlineToggle.checked;
-  localStorage.setItem(EXPORT_PREFS_KEY, JSON.stringify({ scale, transparent, svgScale, svgInline }));
+  const width = exportWidthSelect.value;
+  const customWidth = Number(exportWidthCustomInput.value);
+  localStorage.setItem(
+    EXPORT_PREFS_KEY,
+    JSON.stringify({ scale, transparent, svgScale, svgInline, width, customWidth })
+  );
 }
 
 exportScaleSelect.addEventListener('change', persistExportPrefs);
+exportWidthSelect.addEventListener('change', persistExportPrefs);
+exportWidthCustomInput.addEventListener('input', persistExportPrefs);
 exportTransparentToggle.addEventListener('change', persistExportPrefs);
 exportSvgScaleSelect.addEventListener('change', persistExportPrefs);
 exportSvgInlineToggle.addEventListener('change', persistExportPrefs);

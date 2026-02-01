@@ -19,6 +19,7 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - PNG export controls (scale + transparent background)
 - Guardrails for large diagrams (pause auto-render, skip huge diffs)
 - SVG export controls (scale + inline styles option)
+- Export sizing presets (auto/small/medium/large/custom width)
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 

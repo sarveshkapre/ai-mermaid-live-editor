@@ -10,6 +10,7 @@
 - Added PNG export controls for scale and transparent background with saved preferences.
 - Added guardrails for large diagrams: auto-render pauses with manual “Render now” and huge diffs are skipped.
 - Added SVG export controls for scale and optional inline styles with saved preferences.
+- Added export width presets (auto/small/medium/large/custom) applied to PNG and SVG.
 
 ## How to verify
 ```bash
