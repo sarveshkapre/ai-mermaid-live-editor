@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Mermaid Live Editor</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="bg"></div>
+    <main class="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">AI Mermaid Live Editor</p>
+          <h1>Design, render, and patch Mermaid diagrams in one place.</h1>
+          <p class="subhead">Live render, diff previews, share links, and exports. Local-first.</p>
+        </div>
+        <div class="hero-actions">
+          <button id="theme-toggle" class="ghost">Toggle theme</button>
+          <button id="copy-link">Copy share link</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Mermaid editor</h2>
+            <div class="hint">Live render with inline errors. Ctrl/Cmd + Enter to apply patch.</div>
+          </div>
+          <textarea id="editor" spellcheck="false"></textarea>
+          <div class="toolbar">
+            <button id="commit">Commit snapshot</button>
+            <button id="export-svg" class="ghost">Export SVG</button>
+            <button id="export-png" class="ghost">Export PNG</button>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Live render</h2>
+            <div class="hint" id="render-status">Ready</div>
+          </div>
+          <div id="preview" class="preview"></div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>AI patch studio</h2>
+            <div class="hint">Paste or generate patch proposals, then apply with preview.</div>
+          </div>
+          <label class="label" for="instructions">Instructions</label>
+          <textarea id="instructions" placeholder="Refactor the flow into swimlanes with explicit approvals."></textarea>
+          <div class="toolbar">
+            <button id="simulate">Simulate AI patch</button>
+            <button id="apply-patch" class="ghost">Apply patch</button>
+          </div>
+          <label class="label" for="proposal">Patch proposal</label>
+          <textarea id="proposal" placeholder="AI patch output will appear here."></textarea>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Diff preview</h2>
+            <div class="hint">Line diff between current and proposed diagram.</div>
+          </div>
+          <div id="diff" class="diff"></div>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Commit timeline</h2>
+            <div class="hint">Snapshots are stored locally in your browser.</div>
+          </div>
+          <div id="timeline" class="timeline"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Quick actions</h2>
+          </div>
+          <div class="quick-actions">
+            <button id="reset" class="ghost">Reset to starter</button>
+            <button id="clear-history" class="ghost">Clear history</button>
+            <button id="download-history">Download history JSON</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
