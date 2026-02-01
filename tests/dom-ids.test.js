@@ -24,11 +24,13 @@ describe('index.html wiring', () => {
       'apply-patch',
       'export-svg',
       'export-png',
+      'copy-source',
       'reset',
       'clear-history',
       'download-history',
       'restore-draft',
       'clear-draft',
+      'download-source',
     ];
 
     requiredIds.forEach((id) => {

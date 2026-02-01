@@ -6,6 +6,7 @@
 - Kept diff preview in sync as the editor content changes.
 - Added a smoke test to ensure `index.html` includes required element IDs.
 - Added draft autosave plus restore/clear controls to prevent refresh data loss.
+- Added copy/download Mermaid source actions.
 
 ## How to verify
 ```bash

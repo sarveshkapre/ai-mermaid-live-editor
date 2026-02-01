@@ -7,3 +7,4 @@
 - UX polish: shortcuts dialog (`?`), copy-link feedback, safer clipboard fallback
 - Reliability: diff preview stays synced with editor updates
 - Reliability: draft autosave with restore/clear actions
+- UX: copy/download Mermaid source

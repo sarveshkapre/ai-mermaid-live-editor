@@ -69,11 +69,15 @@ const exportSvgBtn = byId('export-svg');
 /** @type {HTMLButtonElement} */
 const exportPngBtn = byId('export-png');
 /** @type {HTMLButtonElement} */
+const copySourceBtn = byId('copy-source');
+/** @type {HTMLButtonElement} */
 const resetBtn = byId('reset');
 /** @type {HTMLButtonElement} */
 const clearHistoryBtn = byId('clear-history');
 /** @type {HTMLButtonElement} */
 const downloadHistoryBtn = byId('download-history');
+/** @type {HTMLButtonElement} */
+const downloadSourceBtn = byId('download-source');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -351,6 +355,30 @@ function downloadHistory() {
   downloadBlob(blob, 'mermaid-history.json');
 }
 
+async function copySource() {
+  const text = editor.value.trim();
+  if (!text) {
+    showToast('Nothing to copy yet.');
+    return;
+  }
+  try {
+    await writeClipboardText(text);
+    showToast('Mermaid source copied.');
+  } catch {
+    showToast('Copy failed.');
+  }
+}
+
+function downloadSource() {
+  const text = editor.value.trim();
+  if (!text) {
+    showToast('Nothing to download yet.');
+    return;
+  }
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  downloadBlob(blob, 'diagram.mmd');
+}
+
 /**
  * @param {Blob} blob
  * @param {string} filename
@@ -420,6 +448,7 @@ simulateBtn.addEventListener('click', simulatePatch);
 applyPatchBtn.addEventListener('click', applyPatch);
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
+copySourceBtn.addEventListener('click', copySource);
 
 resetBtn.addEventListener('click', () => {
   if (!confirm('Reset editor to the starter diagram?')) return;
@@ -434,6 +463,7 @@ clearHistoryBtn.addEventListener('click', () => {
 });
 
 downloadHistoryBtn.addEventListener('click', downloadHistory);
+downloadSourceBtn.addEventListener('click', downloadSource);
 
 restoreDraftBtn.addEventListener('click', () => {
   const draft = loadDraft();
