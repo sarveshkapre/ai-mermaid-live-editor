@@ -41,7 +41,10 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Live render</h2>
-            <div class="hint" id="render-status" role="status" aria-live="polite" aria-atomic="true">Ready</div>
+            <div class="render-actions">
+              <div class="hint" id="render-status" role="status" aria-live="polite" aria-atomic="true">Ready</div>
+              <button id="render-now" class="ghost" type="button">Render now</button>
+            </div>
           </div>
           <div id="preview" class="preview"></div>
         </div>

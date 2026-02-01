@@ -9,3 +9,4 @@
 - Reliability: draft autosave with restore/clear actions
 - UX: copy/download Mermaid source
 - UX: PNG export controls for scale + transparency
+- Reliability: large diagram guardrails (manual render, diff skip)

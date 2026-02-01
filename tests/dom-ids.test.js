@@ -8,6 +8,7 @@ describe('index.html wiring', () => {
       'editor',
       'preview',
       'render-status',
+      'render-now',
       'stats',
       'instructions',
       'proposal',

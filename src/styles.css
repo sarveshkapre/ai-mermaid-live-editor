@@ -155,6 +155,12 @@ button.ghost {
   font-size: 18px;
 }
 
+.render-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .hint {
   color: var(--muted);
   font-size: 12px;

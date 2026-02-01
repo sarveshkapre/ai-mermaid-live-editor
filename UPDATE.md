@@ -8,6 +8,7 @@
 - Added draft autosave plus restore/clear controls to prevent refresh data loss.
 - Added copy/download Mermaid source actions.
 - Added PNG export controls for scale and transparent background with saved preferences.
+- Added guardrails for large diagrams: auto-render pauses with manual “Render now” and huge diffs are skipped.
 
 ## How to verify
 ```bash

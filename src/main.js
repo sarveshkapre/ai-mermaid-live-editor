@@ -35,6 +35,8 @@ const editor = byId('editor');
 const preview = byId('preview');
 /** @type {HTMLDivElement} */
 const renderStatus = byId('render-status');
+/** @type {HTMLButtonElement} */
+const renderNowBtn = byId('render-now');
 /** @type {HTMLDivElement} */
 const stats = byId('stats');
 /** @type {HTMLTextAreaElement} */
@@ -97,6 +99,8 @@ let lastFocusedBeforeDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
 const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
+const DIFF_LIMITS = { maxChars: 15000, maxLines: 800 };
+const RENDER_LIMITS = { maxChars: 20000, maxLines: 1000 };
 
 mermaid.initialize({
   startOnLoad: false,
@@ -129,15 +133,22 @@ function updateStats() {
   stats.textContent = `${lines} lines · ${chars} chars${draftLabel}`;
 }
 
-async function renderMermaid() {
+/**
+ * @param {boolean=} force
+ */
+async function renderMermaid(force = false) {
   const code = editor.value.trim();
   if (!code) {
     preview.innerHTML = '';
     renderStatus.textContent = 'Empty diagram';
     return;
   }
+  if (isTooLargeForRender(code) && !force) {
+    renderStatus.textContent = 'Large diagram: rendering paused. Click Render now.';
+    return;
+  }
   try {
-    renderStatus.textContent = 'Rendering…';
+    renderStatus.textContent = force && isTooLargeForRender(code) ? 'Rendering large diagram…' : 'Rendering…';
     const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
     lastSvg = svg;
     preview.innerHTML = svg;
@@ -153,6 +164,7 @@ function scheduleRender() {
   if (renderTimer) {
     window.clearTimeout(renderTimer);
   }
+  const delay = isTooLargeForRender(editor.value) ? 800 : 200;
   renderTimer = window.setTimeout(() => {
     renderMermaid();
     updateStats();
@@ -168,7 +180,7 @@ function scheduleRender() {
       lastDraftSavedAt = Date.now();
     }
     updateStats();
-  }, 200);
+  }, delay);
 }
 
 function simulatePatch() {
@@ -197,6 +209,10 @@ function updateDiff() {
   const next = proposal.value;
   if (!next.trim()) {
     diffEl.innerHTML = '<div class="hint">No patch proposal yet.</div>';
+    return;
+  }
+  if (isTooLargeForDiff(base, next)) {
+    diffEl.innerHTML = '<div class="hint">Diff too large to compute automatically.</div>';
     return;
   }
   const diff = diffLines(base, next);
@@ -413,6 +429,24 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;');
 }
 
+/**
+ * @param {string} code
+ */
+function isTooLargeForRender(code) {
+  const lines = code.split('\n').length;
+  return code.length > RENDER_LIMITS.maxChars || lines > RENDER_LIMITS.maxLines;
+}
+
+/**
+ * @param {string} before
+ * @param {string} after
+ */
+function isTooLargeForDiff(before, after) {
+  const total = before.length + after.length;
+  const lines = before.split('\n').length + after.split('\n').length;
+  return total > DIFF_LIMITS.maxChars || lines > DIFF_LIMITS.maxLines;
+}
+
 function init() {
   const rawPrefs = localStorage.getItem(EXPORT_PREFS_KEY);
   if (rawPrefs) {
@@ -476,6 +510,7 @@ applyPatchBtn.addEventListener('click', applyPatch);
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 copySourceBtn.addEventListener('click', copySource);
+renderNowBtn.addEventListener('click', () => renderMermaid(true));
 
 resetBtn.addEventListener('click', () => {
   if (!confirm('Reset editor to the starter diagram?')) return;

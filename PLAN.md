@@ -17,6 +17,7 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Local draft autosave + restore/clear actions (prevents accidental refresh data loss)
 - Copy/download Mermaid source buttons
 - PNG export controls (scale + transparent background)
+- Guardrails for large diagrams (pause auto-render, skip huge diffs)
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 
