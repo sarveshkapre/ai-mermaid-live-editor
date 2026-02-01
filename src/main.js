@@ -92,6 +92,8 @@ const exportTransparentToggle = byId('export-transparent');
 const exportSvgScaleSelect = byId('export-svg-scale');
 /** @type {HTMLInputElement} */
 const exportSvgInlineToggle = byId('export-svg-inline');
+/** @type {HTMLInputElement} */
+const exportSvgMinifyToggle = byId('export-svg-minify');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -352,7 +354,10 @@ function exportSvg() {
   if (!lastSvg) return;
   const base = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
   const scaled = applySvgWidth(base, resolveExportWidth());
-  const output = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
+  let output = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
+  if (exportSvgMinifyToggle.checked) {
+    output = minifySvg(output);
+  }
   const blob = new Blob([output], { type: 'image/svg+xml' });
   downloadBlob(blob, 'diagram.svg');
 }
@@ -483,6 +488,17 @@ function inlineSvgStyles(svg) {
 }
 
 /**
+ * @param {string} svg
+ */
+function minifySvg(svg) {
+  return svg
+    .replace(/<!--([\s\S]*?)-->/g, '')
+    .replace(/>\s+</g, '><')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
  * @param {string} css
  * @param {string} className
  */
@@ -583,6 +599,9 @@ function init() {
         if (typeof prefs.svgInline === 'boolean') {
           exportSvgInlineToggle.checked = prefs.svgInline;
         }
+        if (typeof prefs.svgMinify === 'boolean') {
+          exportSvgMinifyToggle.checked = prefs.svgMinify;
+        }
       }
     } catch {
       localStorage.removeItem(EXPORT_PREFS_KEY);
@@ -657,11 +676,12 @@ function persistExportPrefs() {
   const transparent = exportTransparentToggle.checked;
   const svgScale = Number(exportSvgScaleSelect.value) || 1;
   const svgInline = exportSvgInlineToggle.checked;
+  const svgMinify = exportSvgMinifyToggle.checked;
   const width = exportWidthSelect.value;
   const customWidth = Number(exportWidthCustomInput.value);
   localStorage.setItem(
     EXPORT_PREFS_KEY,
-    JSON.stringify({ scale, transparent, svgScale, svgInline, width, customWidth })
+    JSON.stringify({ scale, transparent, svgScale, svgInline, svgMinify, width, customWidth })
   );
 }
 
@@ -671,6 +691,7 @@ exportWidthCustomInput.addEventListener('input', persistExportPrefs);
 exportTransparentToggle.addEventListener('change', persistExportPrefs);
 exportSvgScaleSelect.addEventListener('change', persistExportPrefs);
 exportSvgInlineToggle.addEventListener('change', persistExportPrefs);
+exportSvgMinifyToggle.addEventListener('change', persistExportPrefs);
 
 restoreDraftBtn.addEventListener('click', () => {
   const draft = loadDraft();
