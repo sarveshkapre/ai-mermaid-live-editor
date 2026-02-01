@@ -35,6 +35,7 @@
             <button id="export-png" class="ghost" type="button">Export PNG</button>
             <button id="copy-source" class="ghost" type="button">Copy Mermaid</button>
             <button id="copy-svg" class="ghost" type="button">Copy SVG</button>
+            <button id="copy-png" class="ghost" type="button">Copy PNG</button>
           </div>
           <div class="stats" id="stats"></div>
         </div>
@@ -48,6 +49,15 @@
             </div>
           </div>
           <div id="preview" class="preview"></div>
+          <div class="render-exports">
+            <div id="export-summary" class="hint">Export summary updates after render.</div>
+            <div class="toolbar">
+              <button data-action="export-svg" class="ghost" type="button">Export SVG</button>
+              <button data-action="export-png" class="ghost" type="button">Export PNG</button>
+              <button data-action="copy-svg" class="ghost" type="button">Copy SVG</button>
+              <button data-action="copy-png" class="ghost" type="button">Copy PNG</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -141,7 +151,6 @@
                 <input id="export-svg-minify" type="checkbox" />
                 <span>Minify SVG</span>
               </label>
-              <div id="export-summary" class="export-summary hint">Export summary updates after render.</div>
             </div>
           </div>
         </div>

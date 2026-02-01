@@ -75,6 +75,8 @@ const copySourceBtn = byId('copy-source');
 /** @type {HTMLButtonElement} */
 const copySvgBtn = byId('copy-svg');
 /** @type {HTMLButtonElement} */
+const copyPngBtn = byId('copy-png');
+/** @type {HTMLButtonElement} */
 const resetBtn = byId('reset');
 /** @type {HTMLButtonElement} */
 const clearHistoryBtn = byId('clear-history');
@@ -372,34 +374,15 @@ function exportSvg() {
 
 function exportPng() {
   if (!lastSvg) return;
-  const svgBlob = new Blob([lastSvg], { type: 'image/svg+xml' });
-  const url = URL.createObjectURL(svgBlob);
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    const scale = Number(exportScaleSelect.value) || 1;
-    const targetWidth = resolveExportWidth();
-    const width = targetWidth ? targetWidth : img.width * scale;
-    const ratio = img.height / img.width || 1;
-    canvas.width = Math.max(1, Math.round(width));
-    canvas.height = Math.max(1, Math.round(width * ratio));
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    if (!exportTransparentToggle.checked) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
+  createPngBlob()
+    .then((blob) => {
       if (blob) {
         downloadBlob(blob, 'diagram.png');
       }
-      URL.revokeObjectURL(url);
-    }, 'image/png');
-  };
-  img.src = url;
+    })
+    .catch(() => {
+      showToast('Export failed.');
+    });
 }
 
 function downloadHistory() {
@@ -604,6 +587,68 @@ async function copySvg() {
   }
 }
 
+async function copyPng() {
+  if (!lastSvg) {
+    showToast('Render a diagram first.');
+    return;
+  }
+  if (!navigator.clipboard || typeof window.ClipboardItem === 'undefined') {
+    showToast('Clipboard image copy not supported.');
+    return;
+  }
+  try {
+    const blob = await createPngBlob();
+    if (!blob) {
+      showToast('Copy failed.');
+      return;
+    }
+    const item = new ClipboardItem({ 'image/png': blob });
+    await navigator.clipboard.write([item]);
+    showToast('PNG copied.');
+  } catch {
+    showToast('Copy failed.');
+  }
+}
+
+function createPngBlob() {
+  return new Promise((resolve, reject) => {
+    const svgBlob = new Blob([lastSvg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const scale = Number(exportScaleSelect.value) || 1;
+      const targetWidth = resolveExportWidth();
+      const width = targetWidth ? targetWidth : img.width * scale;
+      const ratio = img.height / img.width || 1;
+      canvas.width = Math.max(1, Math.round(width));
+      canvas.height = Math.max(1, Math.round(width * ratio));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error('Canvas unavailable'));
+        return;
+      }
+      if (!exportTransparentToggle.checked) {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        resolve(blob || null);
+      }, 'image/png');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Image load failed'));
+    };
+    img.src = url;
+  });
+}
+
 /**
  * @param {Blob} blob
  * @param {string} filename
@@ -726,7 +771,17 @@ exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 copySourceBtn.addEventListener('click', copySource);
 copySvgBtn.addEventListener('click', copySvg);
+copyPngBtn.addEventListener('click', copyPng);
 renderNowBtn.addEventListener('click', () => renderMermaid(true));
+
+document.querySelectorAll('[data-action]').forEach((button) => {
+  if (!(button instanceof HTMLButtonElement)) return;
+  const action = button.dataset.action;
+  if (action === 'export-svg') button.addEventListener('click', exportSvg);
+  if (action === 'export-png') button.addEventListener('click', exportPng);
+  if (action === 'copy-svg') button.addEventListener('click', copySvg);
+  if (action === 'copy-png') button.addEventListener('click', copyPng);
+});
 
 resetBtn.addEventListener('click', () => {
   if (!confirm('Reset editor to the starter diagram?')) return;

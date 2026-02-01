@@ -23,6 +23,7 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - SVG export minify option
 - Copy SVG action
 - Export summary with estimated output sizes
+- Copy PNG action + compact export panel
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 

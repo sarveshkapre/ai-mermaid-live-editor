@@ -14,6 +14,7 @@
 - Added SVG minify option for lighter exports.
 - Added Copy SVG action using current export settings.
 - Added export summary showing estimated PNG/SVG output sizes.
+- Added Copy PNG action and a compact export panel under Live render.
 
 ## How to verify
 ```bash

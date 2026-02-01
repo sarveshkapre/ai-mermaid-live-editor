@@ -15,3 +15,4 @@
 - UX: SVG minify option
 - UX: copy SVG action
 - UX: export summary with estimated sizes
+- UX: copy PNG action + compact export panel
