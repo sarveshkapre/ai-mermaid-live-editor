@@ -100,6 +100,16 @@ const exportSvgInlineToggle = byId('export-svg-inline');
 const exportSvgMinifyToggle = byId('export-svg-minify');
 /** @type {HTMLDivElement} */
 const exportSummary = byId('export-summary');
+/** @type {HTMLSelectElement} */
+const exportPresetSelect = byId('export-preset');
+/** @type {HTMLInputElement} */
+const exportPresetName = byId('export-preset-name');
+/** @type {HTMLButtonElement} */
+const savePresetBtn = byId('save-preset');
+/** @type {HTMLButtonElement} */
+const deletePresetBtn = byId('delete-preset');
+/** @type {HTMLDivElement} */
+const exportHistoryEl = byId('export-history');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -115,6 +125,8 @@ let lastFocusedBeforeDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
 const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
+const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
+const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
 const DIFF_LIMITS = { maxChars: 15000, maxLines: 800 };
 const RENDER_LIMITS = { maxChars: 20000, maxLines: 1000 };
 
@@ -370,6 +382,7 @@ function exportSvg() {
   }
   const blob = new Blob([output], { type: 'image/svg+xml' });
   downloadBlob(blob, 'diagram.svg');
+  addExportHistory('SVG', output.length);
 }
 
 function exportPng() {
@@ -378,6 +391,7 @@ function exportPng() {
     .then((blob) => {
       if (blob) {
         downloadBlob(blob, 'diagram.png');
+        addExportHistory('PNG', blob.size);
       }
     })
     .catch(() => {
@@ -410,6 +424,144 @@ function updateExportSummary() {
   const svgWidth = Math.round(widthValue * (widthPreset === 'auto' ? svgScale : 1));
   const svgHeight = Math.round(svgWidth * (dims.height / dims.width));
   exportSummary.textContent = `PNG ${pngWidth}×${pngHeight}px · SVG ${svgWidth}×${svgHeight}px`;
+}
+
+/**
+ * @param {string} label
+ * @param {number} bytes
+ */
+function addExportHistory(label, bytes) {
+  const items = loadExportHistory();
+  const entry = {
+    id: crypto.randomUUID(),
+    label,
+    bytes,
+    createdAt: Date.now(),
+  };
+  items.unshift(entry);
+  saveExportHistory(items.slice(0, 6));
+  renderExportHistory();
+}
+
+function renderExportHistory() {
+  const items = loadExportHistory();
+  if (!items.length) {
+    exportHistoryEl.textContent = 'No exports yet.';
+    return;
+  }
+  exportHistoryEl.innerHTML = items
+    .map((item) => {
+      const time = new Date(item.createdAt).toLocaleTimeString();
+      const size = item.bytes ? `${Math.round(item.bytes / 1024)} KB` : '—';
+      return `<div>${escapeHtml(item.label)} · ${size} · ${time}</div>`;
+    })
+    .join('');
+}
+
+function loadExportHistory() {
+  const raw = localStorage.getItem(EXPORT_HISTORY_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * @param {Array<{id:string,label:string,bytes:number,createdAt:number}>} items
+ */
+function saveExportHistory(items) {
+  localStorage.setItem(EXPORT_HISTORY_KEY, JSON.stringify(items));
+}
+
+function loadExportPresets() {
+  const raw = localStorage.getItem(EXPORT_PRESET_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * @param {Record<string, unknown>} presets
+ */
+function saveExportPresets(presets) {
+  localStorage.setItem(EXPORT_PRESET_KEY, JSON.stringify(presets));
+}
+
+function collectExportPrefs() {
+  return {
+    scale: Number(exportScaleSelect.value) || 1,
+    transparent: exportTransparentToggle.checked,
+    svgScale: Number(exportSvgScaleSelect.value) || 1,
+    svgInline: exportSvgInlineToggle.checked,
+    svgMinify: exportSvgMinifyToggle.checked,
+    width: exportWidthSelect.value,
+    customWidth: Number(exportWidthCustomInput.value) || 0,
+  };
+}
+
+/**
+ * @param {Record<string, unknown>} prefs
+ */
+function applyExportPrefs(prefs) {
+  if (!prefs || typeof prefs !== 'object') return;
+  if (typeof prefs.scale === 'number') exportScaleSelect.value = String(prefs.scale);
+  if (typeof prefs.transparent === 'boolean') exportTransparentToggle.checked = prefs.transparent;
+  if (typeof prefs.svgScale === 'number') exportSvgScaleSelect.value = String(prefs.svgScale);
+  if (typeof prefs.svgInline === 'boolean') exportSvgInlineToggle.checked = prefs.svgInline;
+  if (typeof prefs.svgMinify === 'boolean') exportSvgMinifyToggle.checked = prefs.svgMinify;
+  if (typeof prefs.width === 'string') exportWidthSelect.value = prefs.width;
+  if (typeof prefs.customWidth === 'number') exportWidthCustomInput.value = String(prefs.customWidth);
+  resolveExportWidth();
+  updateExportSummary();
+}
+
+function loadPresetOptions() {
+  const presets = loadExportPresets();
+  const keys = Object.keys(presets);
+  exportPresetSelect.innerHTML = '<option value="default">Default</option>';
+  keys.forEach((key) => {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    exportPresetSelect.appendChild(option);
+  });
+}
+
+function saveCurrentPreset() {
+  const name = exportPresetName.value.trim();
+  if (!name) {
+    showToast('Preset name required.');
+    return;
+  }
+  const presets = loadExportPresets();
+  presets[name] = collectExportPrefs();
+  saveExportPresets(presets);
+  loadPresetOptions();
+  exportPresetSelect.value = name;
+  showToast('Preset saved.');
+}
+
+function deleteCurrentPreset() {
+  const name = exportPresetSelect.value;
+  if (name === 'default') {
+    showToast('Default preset cannot be deleted.');
+    return;
+  }
+  const presets = loadExportPresets();
+  if (!presets[name]) return;
+  if (!confirm(`Delete preset "${name}"?`)) return;
+  delete presets[name];
+  saveExportPresets(presets);
+  loadPresetOptions();
+  exportPresetSelect.value = 'default';
+  showToast('Preset deleted.');
 }
 
 /**
@@ -582,6 +734,7 @@ async function copySvg() {
   try {
     await writeClipboardText(output);
     showToast('SVG copied.');
+    addExportHistory('Copy SVG', output.length);
   } catch {
     showToast('Copy failed.');
   }
@@ -605,6 +758,7 @@ async function copyPng() {
     const item = new ClipboardItem({ 'image/png': blob });
     await navigator.clipboard.write([item]);
     showToast('PNG copied.');
+    addExportHistory('Copy PNG', blob.size);
   } catch {
     showToast('Copy failed.');
   }
@@ -697,33 +851,15 @@ function init() {
     try {
       const prefs = JSON.parse(rawPrefs);
       if (prefs && typeof prefs === 'object') {
-        if (typeof prefs.scale === 'number') {
-          exportScaleSelect.value = String(prefs.scale);
-        }
-        if (typeof prefs.width === 'string') {
-          exportWidthSelect.value = prefs.width;
-        }
-        if (typeof prefs.customWidth === 'number') {
-          exportWidthCustomInput.value = String(prefs.customWidth);
-        }
-        if (typeof prefs.transparent === 'boolean') {
-          exportTransparentToggle.checked = prefs.transparent;
-        }
-        if (typeof prefs.svgScale === 'number') {
-          exportSvgScaleSelect.value = String(prefs.svgScale);
-        }
-        if (typeof prefs.svgInline === 'boolean') {
-          exportSvgInlineToggle.checked = prefs.svgInline;
-        }
-        if (typeof prefs.svgMinify === 'boolean') {
-          exportSvgMinifyToggle.checked = prefs.svgMinify;
-        }
+        applyExportPrefs(prefs);
       }
     } catch {
       localStorage.removeItem(EXPORT_PREFS_KEY);
     }
   }
   resolveExportWidth();
+  loadPresetOptions();
+  renderExportHistory();
 
   const storedTheme = localStorage.getItem('theme');
   const prefersDark =
@@ -799,17 +935,8 @@ downloadHistoryBtn.addEventListener('click', downloadHistory);
 downloadSourceBtn.addEventListener('click', downloadSource);
 
 function persistExportPrefs() {
-  const scale = Number(exportScaleSelect.value) || 1;
-  const transparent = exportTransparentToggle.checked;
-  const svgScale = Number(exportSvgScaleSelect.value) || 1;
-  const svgInline = exportSvgInlineToggle.checked;
-  const svgMinify = exportSvgMinifyToggle.checked;
-  const width = exportWidthSelect.value;
-  const customWidth = Number(exportWidthCustomInput.value);
-  localStorage.setItem(
-    EXPORT_PREFS_KEY,
-    JSON.stringify({ scale, transparent, svgScale, svgInline, svgMinify, width, customWidth })
-  );
+  const prefs = collectExportPrefs();
+  localStorage.setItem(EXPORT_PREFS_KEY, JSON.stringify(prefs));
   updateExportSummary();
 }
 
@@ -820,6 +947,23 @@ exportTransparentToggle.addEventListener('change', persistExportPrefs);
 exportSvgScaleSelect.addEventListener('change', persistExportPrefs);
 exportSvgInlineToggle.addEventListener('change', persistExportPrefs);
 exportSvgMinifyToggle.addEventListener('change', persistExportPrefs);
+exportPresetSelect.addEventListener('change', () => {
+  if (exportPresetSelect.value === 'default') {
+    const rawPrefs = localStorage.getItem(EXPORT_PREFS_KEY);
+    if (rawPrefs) {
+      try {
+        applyExportPrefs(JSON.parse(rawPrefs));
+      } catch {
+        return;
+      }
+    }
+    return;
+  }
+  const presets = loadExportPresets();
+  applyExportPrefs(presets[exportPresetSelect.value]);
+});
+savePresetBtn.addEventListener('click', saveCurrentPreset);
+deletePresetBtn.addEventListener('click', deleteCurrentPreset);
 
 restoreDraftBtn.addEventListener('click', () => {
   const draft = loadDraft();

@@ -16,3 +16,4 @@
 - UX: copy SVG action
 - UX: export summary with estimated sizes
 - UX: copy PNG action + compact export panel
+- UX: export presets and recent export history

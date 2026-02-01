@@ -15,6 +15,7 @@
 - Added Copy SVG action using current export settings.
 - Added export summary showing estimated PNG/SVG output sizes.
 - Added Copy PNG action and a compact export panel under Live render.
+- Added export presets and recent export history.
 
 ## How to verify
 ```bash

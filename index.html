@@ -109,6 +109,20 @@
             <div class="export-controls">
               <div class="label">Export settings</div>
               <label class="field">
+                <span>Preset</span>
+                <select id="export-preset">
+                  <option value="default">Default</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Preset name</span>
+                <input id="export-preset-name" type="text" maxlength="40" placeholder="e.g. Blog hero" />
+              </label>
+              <div class="toolbar">
+                <button id="save-preset" class="ghost" type="button">Save preset</button>
+                <button id="delete-preset" class="ghost" type="button">Delete preset</button>
+              </div>
+              <label class="field">
                 <span>PNG scale</span>
                 <select id="export-scale">
                   <option value="1">1x</option>
@@ -151,6 +165,10 @@
                 <input id="export-svg-minify" type="checkbox" />
                 <span>Minify SVG</span>
               </label>
+            </div>
+            <div class="export-history">
+              <div class="label">Recent exports</div>
+              <div id="export-history" class="hint">No exports yet.</div>
             </div>
           </div>
         </div>

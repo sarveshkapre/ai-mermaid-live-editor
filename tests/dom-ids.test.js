@@ -42,6 +42,11 @@ describe('index.html wiring', () => {
       'export-svg-inline',
       'export-svg-minify',
       'export-summary',
+      'export-preset',
+      'export-preset-name',
+      'save-preset',
+      'delete-preset',
+      'export-history',
     ];
 
     requiredIds.forEach((id) => {

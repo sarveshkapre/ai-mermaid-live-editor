@@ -23,6 +23,7 @@ Split-screen Mermaid editor with live rendering plus a patch-driven AI panel for
 - Copy SVG action
 - Copy PNG action
 - Export summary with estimated output sizes
+- Export presets per diagram + recent export history
 - Dark mode and keyboard shortcuts
 
 ## Quickstart

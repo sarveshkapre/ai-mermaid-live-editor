@@ -211,6 +211,17 @@ select {
   width: 120px;
 }
 
+.field input[type="text"] {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  flex: 1;
+}
+
 .field {
   display: flex;
   align-items: center;
@@ -314,6 +325,15 @@ select {
 .export-controls {
   display: grid;
   gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.export-history {
+  display: grid;
+  gap: 8px;
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--border);
