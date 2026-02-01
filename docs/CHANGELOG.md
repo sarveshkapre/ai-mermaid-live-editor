@@ -14,3 +14,4 @@
 - UX: export sizing presets with custom width
 - UX: SVG minify option
 - UX: copy SVG action
+- UX: export summary with estimated sizes

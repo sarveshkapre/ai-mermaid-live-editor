@@ -96,6 +96,8 @@ const exportSvgScaleSelect = byId('export-svg-scale');
 const exportSvgInlineToggle = byId('export-svg-inline');
 /** @type {HTMLInputElement} */
 const exportSvgMinifyToggle = byId('export-svg-minify');
+/** @type {HTMLDivElement} */
+const exportSummary = byId('export-summary');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -153,10 +155,12 @@ async function renderMermaid(force = false) {
   if (!code) {
     preview.innerHTML = '';
     renderStatus.textContent = 'Empty diagram';
+    exportSummary.textContent = 'Export summary updates after render.';
     return;
   }
   if (isTooLargeForRender(code) && !force) {
     renderStatus.textContent = 'Large diagram: rendering paused. Click Render now.';
+    exportSummary.textContent = 'Export summary paused for large diagrams.';
     return;
   }
   try {
@@ -165,10 +169,12 @@ async function renderMermaid(force = false) {
     lastSvg = svg;
     preview.innerHTML = svg;
     renderStatus.textContent = 'Rendered';
+    updateExportSummary();
   } catch (error) {
     preview.textContent = '';
     const message = error instanceof Error ? error.message : String(error);
     renderStatus.textContent = `Error: ${message}`;
+    exportSummary.textContent = 'Export summary unavailable.';
   }
 }
 
@@ -402,6 +408,50 @@ function downloadHistory() {
   downloadBlob(blob, 'mermaid-history.json');
 }
 
+function updateExportSummary() {
+  if (!lastSvg) {
+    exportSummary.textContent = 'Export summary updates after render.';
+    return;
+  }
+  const dims = getSvgDimensions(lastSvg);
+  if (!dims) {
+    exportSummary.textContent = 'Export summary unavailable.';
+    return;
+  }
+  const widthPreset = exportWidthSelect.value;
+  const widthValue = resolveExportWidth() || dims.width;
+  const pngScale = Number(exportScaleSelect.value) || 1;
+  const svgScale = Number(exportSvgScaleSelect.value) || 1;
+  const pngWidth = Math.round(widthValue * (widthPreset === 'auto' ? pngScale : 1));
+  const pngHeight = Math.round(pngWidth * (dims.height / dims.width));
+  const svgWidth = Math.round(widthValue * (widthPreset === 'auto' ? svgScale : 1));
+  const svgHeight = Math.round(svgWidth * (dims.height / dims.width));
+  exportSummary.textContent = `PNG ${pngWidth}×${pngHeight}px · SVG ${svgWidth}×${svgHeight}px`;
+}
+
+/**
+ * @param {string} svg
+ * @returns {{width:number, height:number} | null}
+ */
+function getSvgDimensions(svg) {
+  const widthMatch = svg.match(/width="([\d.]+)(px)?"/);
+  const heightMatch = svg.match(/height="([\d.]+)(px)?"/);
+  if (widthMatch && heightMatch) {
+    const width = Number(widthMatch[1]);
+    const height = Number(heightMatch[1]);
+    if (Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+  const viewBoxMatch = svg.match(/viewBox="([\d.\s]+)"/);
+  if (viewBoxMatch) {
+    const parts = viewBoxMatch[1].trim().split(/\s+/).map(Number);
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      return { width: parts[2], height: parts[3] };
+    }
+  }
+  return null;
+}
 function resolveExportWidth() {
   const preset = exportWidthSelect.value;
   exportWidthCustomInput.disabled = preset !== 'custom';
@@ -705,6 +755,7 @@ function persistExportPrefs() {
     EXPORT_PREFS_KEY,
     JSON.stringify({ scale, transparent, svgScale, svgInline, svgMinify, width, customWidth })
   );
+  updateExportSummary();
 }
 
 exportScaleSelect.addEventListener('change', persistExportPrefs);

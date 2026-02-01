@@ -13,6 +13,7 @@
 - Added export width presets (auto/small/medium/large/custom) applied to PNG and SVG.
 - Added SVG minify option for lighter exports.
 - Added Copy SVG action using current export settings.
+- Added export summary showing estimated PNG/SVG output sizes.
 
 ## How to verify
 ```bash

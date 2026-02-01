@@ -40,6 +40,7 @@ describe('index.html wiring', () => {
       'export-svg-scale',
       'export-svg-inline',
       'export-svg-minify',
+      'export-summary',
     ];
 
     requiredIds.forEach((id) => {
