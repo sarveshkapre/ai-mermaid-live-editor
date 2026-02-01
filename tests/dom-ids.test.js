@@ -34,6 +34,8 @@ describe('index.html wiring', () => {
       'download-source',
       'export-scale',
       'export-transparent',
+      'export-svg-scale',
+      'export-svg-inline',
     ];
 
     requiredIds.forEach((id) => {

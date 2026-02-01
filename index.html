@@ -96,9 +96,9 @@
             <button id="clear-draft" class="ghost" type="button">Clear draft</button>
             <button id="download-source" class="ghost" type="button">Download Mermaid</button>
             <div class="export-controls">
-              <div class="label">PNG export</div>
+              <div class="label">Export settings</div>
               <label class="field">
-                <span>Scale</span>
+                <span>PNG scale</span>
                 <select id="export-scale">
                   <option value="1">1x</option>
                   <option value="1.5">1.5x</option>
@@ -108,7 +108,19 @@
               </label>
               <label class="field checkbox">
                 <input id="export-transparent" type="checkbox" />
-                <span>Transparent background</span>
+                <span>Transparent PNG</span>
+              </label>
+              <label class="field">
+                <span>SVG scale</span>
+                <select id="export-svg-scale">
+                  <option value="1">1x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                </select>
+              </label>
+              <label class="field checkbox">
+                <input id="export-svg-inline" type="checkbox" />
+                <span>Inline SVG styles</span>
               </label>
             </div>
           </div>

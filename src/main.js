@@ -84,6 +84,10 @@ const downloadSourceBtn = byId('download-source');
 const exportScaleSelect = byId('export-scale');
 /** @type {HTMLInputElement} */
 const exportTransparentToggle = byId('export-transparent');
+/** @type {HTMLSelectElement} */
+const exportSvgScaleSelect = byId('export-svg-scale');
+/** @type {HTMLInputElement} */
+const exportSvgInlineToggle = byId('export-svg-inline');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -342,7 +346,9 @@ async function copyShareLink() {
 
 function exportSvg() {
   if (!lastSvg) return;
-  const blob = new Blob([lastSvg], { type: 'image/svg+xml' });
+  const scaled = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
+  const output = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
+  const blob = new Blob([output], { type: 'image/svg+xml' });
   downloadBlob(blob, 'diagram.svg');
 }
 
@@ -379,6 +385,68 @@ function downloadHistory() {
   const data = loadHistory();
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   downloadBlob(blob, 'mermaid-history.json');
+}
+
+/**
+ * @param {string} svg
+ * @param {number} scale
+ */
+function applySvgScale(svg, scale) {
+  if (!scale || scale === 1) return svg;
+  const clamped = Math.max(0.5, Math.min(4, scale));
+  if (!svg.includes('<svg')) return svg;
+  const widthMatch = svg.match(/width="([\d.]+)(px)?"/);
+  const heightMatch = svg.match(/height="([\d.]+)(px)?"/);
+  const viewBoxMatch = svg.match(/viewBox="([\d.\s]+)"/);
+  let next = svg;
+  if (widthMatch) {
+    const width = Number(widthMatch[1]) * clamped;
+    next = next.replace(widthMatch[0], `width="${width}"`);
+  }
+  if (heightMatch) {
+    const height = Number(heightMatch[1]) * clamped;
+    next = next.replace(heightMatch[0], `height="${height}"`);
+  }
+  if (!widthMatch && !heightMatch && viewBoxMatch) {
+    const parts = viewBoxMatch[1].trim().split(/\s+/).map(Number);
+    if (parts.length === 4) {
+      const scaled = [parts[0], parts[1], parts[2] * clamped, parts[3] * clamped];
+      next = next.replace(viewBoxMatch[0], `viewBox="${scaled.join(' ')}"`);
+    }
+  }
+  return next;
+}
+
+/**
+ * @param {string} svg
+ */
+function inlineSvgStyles(svg) {
+  const styleMatch = svg.match(/<style[^>]*>([\s\S]*?)<\/style>/);
+  if (!styleMatch) return svg;
+  const style = styleMatch[1];
+  if (!style.trim()) return svg;
+  let output = svg.replace(styleMatch[0], '');
+  output = output.replace(/class="([^"]+)"/g, (full, classNames) => {
+    const rules = classNames
+      .split(/\s+/)
+      .map(/** @param {string} cls */ (cls) => extractCssRule(style, cls))
+      .filter(Boolean)
+      .join(' ');
+    if (!rules) return full;
+    return `style="${rules}"`;
+  });
+  return output;
+}
+
+/**
+ * @param {string} css
+ * @param {string} className
+ */
+function extractCssRule(css, className) {
+  const regex = new RegExp(`\\\\.${className}\\\\s*\\\\{([^}]+)\\\\}`, 'g');
+  let match = regex.exec(css);
+  if (!match) return '';
+  return match[1].trim().replace(/\\s+/g, ' ');
 }
 
 async function copySource() {
@@ -459,6 +527,12 @@ function init() {
         if (typeof prefs.transparent === 'boolean') {
           exportTransparentToggle.checked = prefs.transparent;
         }
+        if (typeof prefs.svgScale === 'number') {
+          exportSvgScaleSelect.value = String(prefs.svgScale);
+        }
+        if (typeof prefs.svgInline === 'boolean') {
+          exportSvgInlineToggle.checked = prefs.svgInline;
+        }
       }
     } catch {
       localStorage.removeItem(EXPORT_PREFS_KEY);
@@ -530,11 +604,15 @@ downloadSourceBtn.addEventListener('click', downloadSource);
 function persistExportPrefs() {
   const scale = Number(exportScaleSelect.value) || 1;
   const transparent = exportTransparentToggle.checked;
-  localStorage.setItem(EXPORT_PREFS_KEY, JSON.stringify({ scale, transparent }));
+  const svgScale = Number(exportSvgScaleSelect.value) || 1;
+  const svgInline = exportSvgInlineToggle.checked;
+  localStorage.setItem(EXPORT_PREFS_KEY, JSON.stringify({ scale, transparent, svgScale, svgInline }));
 }
 
 exportScaleSelect.addEventListener('change', persistExportPrefs);
 exportTransparentToggle.addEventListener('change', persistExportPrefs);
+exportSvgScaleSelect.addEventListener('change', persistExportPrefs);
+exportSvgInlineToggle.addEventListener('change', persistExportPrefs);
 
 restoreDraftBtn.addEventListener('click', () => {
   const draft = loadDraft();

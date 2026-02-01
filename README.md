@@ -17,6 +17,7 @@ Split-screen Mermaid editor with live rendering plus a patch-driven AI panel for
 - Copy/download Mermaid source
 - PNG export controls (scale, transparency)
 - Large diagram guardrails (manual render, diff skip)
+- SVG export controls (scale, inline styles)
 - Dark mode and keyboard shortcuts
 
 ## Quickstart

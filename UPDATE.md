@@ -9,6 +9,7 @@
 - Added copy/download Mermaid source actions.
 - Added PNG export controls for scale and transparent background with saved preferences.
 - Added guardrails for large diagrams: auto-render pauses with manual “Render now” and huge diffs are skipped.
+- Added SVG export controls for scale and optional inline styles with saved preferences.
 
 ## How to verify
 ```bash
