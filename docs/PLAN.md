@@ -1,5 +1,7 @@
 # PLAN
 
+Planning memory lives in `/PLAN.md` (this file is a longer-form design note).
+
 ## MVP scope
 - Split editor + live Mermaid renderer.
 - AI panel that produces patch proposals with diff preview.
@@ -26,12 +28,12 @@
 4. Tests + security pass + docs polish
 
 ## MVP checklist
-- [ ] Live render with error output
-- [ ] AI patch panel with diff preview
-- [ ] Apply patch + commit timeline
-- [ ] Shareable links
-- [ ] SVG/PNG export
-- [ ] `make check` green
+- [x] Live render with error output
+- [x] AI patch panel with diff preview
+- [x] Apply patch + commit timeline
+- [x] Shareable links
+- [x] SVG/PNG export
+- [x] `make check` green
 
 ## Risks
 - Mermaid syntax errors should not break UI.

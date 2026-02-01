@@ -25,6 +25,7 @@ Open `http://localhost:5173`.
 ## Shortcuts
 - `Ctrl/Cmd + Enter`: apply patch
 - `Ctrl/Cmd + S`: commit snapshot
+- `?`: open shortcuts dialog
 
 ## License
 MIT

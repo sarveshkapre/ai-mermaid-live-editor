@@ -48,6 +48,14 @@ const timelineEl = byId('timeline');
 const themeToggle = byId('theme-toggle');
 /** @type {HTMLButtonElement} */
 const copyLink = byId('copy-link');
+/** @type {HTMLButtonElement} */
+const helpBtn = byId('help');
+/** @type {HTMLDialogElement} */
+const shortcutsDialog = byId('shortcuts-dialog');
+/** @type {HTMLButtonElement} */
+const shortcutsClose = byId('shortcuts-close');
+/** @type {HTMLDivElement} */
+const toast = byId('toast');
 
 /** @type {HTMLButtonElement} */
 const commitBtn = byId('commit');
@@ -69,11 +77,33 @@ const downloadHistoryBtn = byId('download-history');
 let lastSvg = '';
 /** @type {number | null} */
 let renderTimer = null;
+/** @type {number | null} */
+let toastTimer = null;
+/** @type {HTMLElement | null} */
+let lastFocusedBeforeDialog = null;
 
 mermaid.initialize({
   startOnLoad: false,
   theme: document.body.classList.contains('theme-dark') ? 'dark' : 'neutral'
 });
+
+/**
+ * @param {string} message
+ */
+function showToast(message) {
+  toast.textContent = message;
+  toast.hidden = false;
+  toast.dataset.visible = 'true';
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+  toastTimer = window.setTimeout(() => {
+    toast.dataset.visible = 'false';
+    toastTimer = window.setTimeout(() => {
+      toast.hidden = true;
+    }, 220);
+  }, 2200);
+}
 
 function updateStats() {
   const text = editor.value;
@@ -90,6 +120,7 @@ async function renderMermaid() {
     return;
   }
   try {
+    renderStatus.textContent = 'Rendering…';
     const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
     lastSvg = svg;
     preview.innerHTML = svg;
@@ -108,6 +139,7 @@ function scheduleRender() {
   renderTimer = window.setTimeout(() => {
     renderMermaid();
     updateStats();
+    updateDiff();
   }, 200);
 }
 
@@ -135,7 +167,15 @@ function simulatePatch() {
 function updateDiff() {
   const base = editor.value;
   const next = proposal.value;
+  if (!next.trim()) {
+    diffEl.innerHTML = '<div class="hint">No patch proposal yet.</div>';
+    return;
+  }
   const diff = diffLines(base, next);
+  if (diff.every((line) => line.type === 'context')) {
+    diffEl.innerHTML = '<div class="hint">No changes.</div>';
+    return;
+  }
   diffEl.innerHTML = diff
     .map((line) => {
       const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
@@ -198,20 +238,57 @@ function commitSnapshot() {
   renderTimeline();
 }
 
-/** @param {boolean} isDark */
-function applyTheme(isDark) {
+/**
+ * @param {boolean} isDark
+ * @param {{render?: boolean}=} options
+ */
+function applyTheme(isDark, options = {}) {
   document.body.classList.toggle('theme-dark', isDark);
+  themeToggle.setAttribute('aria-pressed', String(isDark));
+  themeToggle.textContent = isDark ? 'Light mode' : 'Dark mode';
   mermaid.initialize({
     startOnLoad: false,
     theme: isDark ? 'dark' : 'neutral'
   });
-  renderMermaid();
+  if (options.render !== false) {
+    renderMermaid();
+  }
 }
 
-function copyShareLink() {
+/**
+ * @param {string} text
+ */
+async function writeClipboardText(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const el = document.createElement('textarea');
+  el.value = text;
+  el.setAttribute('readonly', '');
+  el.style.position = 'fixed';
+  el.style.left = '-9999px';
+  document.body.appendChild(el);
+  el.select();
+  const ok = document.execCommand('copy');
+  el.remove();
+  if (!ok) {
+    throw new Error('Copy failed');
+  }
+}
+
+async function copyShareLink() {
   const hash = encodeHash(editor.value);
   const url = `${window.location.origin}${window.location.pathname}#${hash}`;
-  navigator.clipboard.writeText(url);
+  window.history.replaceState(null, '', `#${hash}`);
+  try {
+    await writeClipboardText(url);
+    showToast('Share link copied.');
+  } catch {
+    showToast('Copy failed. Link shown in prompt.');
+    window.prompt('Copy share link', url);
+  }
 }
 
 function exportSvg() {
@@ -276,8 +353,16 @@ function escapeHtml(value) {
 
 function init() {
   const storedTheme = localStorage.getItem('theme');
-  if (storedTheme === 'dark') {
-    applyTheme(true);
+  const prefersDark =
+    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = storedTheme ? storedTheme === 'dark' : prefersDark;
+  applyTheme(isDark, { render: false });
+
+  if (!storedTheme && typeof window.matchMedia === 'function') {
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    media.addEventListener('change', (event) => {
+      applyTheme(event.matches);
+    });
   }
 
   const hash = window.location.hash.replace('#', '');
@@ -300,11 +385,13 @@ exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 
 resetBtn.addEventListener('click', () => {
+  if (!confirm('Reset editor to the starter diagram?')) return;
   editor.value = DEFAULT_DIAGRAM.trim();
   scheduleRender();
 });
 
 clearHistoryBtn.addEventListener('click', () => {
+  if (!confirm('Clear all snapshots? This cannot be undone.')) return;
   clearHistory();
   renderTimeline();
 });
@@ -319,6 +406,26 @@ themeToggle.addEventListener('click', () => {
   applyTheme(next);
 });
 
+function openShortcuts() {
+  lastFocusedBeforeDialog = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  if (typeof shortcutsDialog.showModal === 'function') {
+    shortcutsDialog.showModal();
+  } else {
+    shortcutsDialog.setAttribute('open', '');
+  }
+  shortcutsClose.focus();
+}
+
+function closeShortcuts() {
+  shortcutsDialog.close();
+}
+
+helpBtn.addEventListener('click', openShortcuts);
+shortcutsClose.addEventListener('click', closeShortcuts);
+shortcutsDialog.addEventListener('close', () => {
+  (lastFocusedBeforeDialog || helpBtn).focus();
+});
+
 window.addEventListener('keydown', (event) => {
   const isCmd = event.metaKey || event.ctrlKey;
   if (isCmd && event.key === 'Enter') {
@@ -328,6 +435,17 @@ window.addEventListener('keydown', (event) => {
   if (isCmd && event.key.toLowerCase() === 's') {
     event.preventDefault();
     commitSnapshot();
+  }
+  if (!isCmd && event.key === '?' && !shortcutsDialog.open) {
+    const target = event.target;
+    const isEditable =
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLInputElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+    if (!isEditable) {
+      event.preventDefault();
+      openShortcuts();
+    }
   }
 });
 
