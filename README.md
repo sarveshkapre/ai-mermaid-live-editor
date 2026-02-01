@@ -20,6 +20,7 @@ Split-screen Mermaid editor with live rendering plus a patch-driven AI panel for
 - SVG export controls (scale, inline styles)
 - Export width presets (auto/small/medium/large/custom)
 - SVG minify option
+- Copy SVG action
 - Dark mode and keyboard shortcuts
 
 ## Quickstart

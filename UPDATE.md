@@ -12,6 +12,7 @@
 - Added SVG export controls for scale and optional inline styles with saved preferences.
 - Added export width presets (auto/small/medium/large/custom) applied to PNG and SVG.
 - Added SVG minify option for lighter exports.
+- Added Copy SVG action using current export settings.
 
 ## How to verify
 ```bash

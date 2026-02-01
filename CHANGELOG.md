@@ -13,3 +13,4 @@
 - UX: SVG export controls for scale + inline styles
 - UX: export sizing presets with custom width
 - UX: SVG minify option
+- UX: copy SVG action

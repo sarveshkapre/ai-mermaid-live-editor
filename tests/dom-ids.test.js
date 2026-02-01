@@ -26,6 +26,7 @@ describe('index.html wiring', () => {
       'export-svg',
       'export-png',
       'copy-source',
+      'copy-svg',
       'reset',
       'clear-history',
       'download-history',

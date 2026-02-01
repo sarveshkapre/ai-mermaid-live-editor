@@ -73,6 +73,8 @@ const exportPngBtn = byId('export-png');
 /** @type {HTMLButtonElement} */
 const copySourceBtn = byId('copy-source');
 /** @type {HTMLButtonElement} */
+const copySvgBtn = byId('copy-svg');
+/** @type {HTMLButtonElement} */
 const resetBtn = byId('reset');
 /** @type {HTMLButtonElement} */
 const clearHistoryBtn = byId('clear-history');
@@ -533,6 +535,25 @@ function downloadSource() {
   downloadBlob(blob, 'diagram.mmd');
 }
 
+async function copySvg() {
+  if (!lastSvg) {
+    showToast('Render a diagram first.');
+    return;
+  }
+  const base = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
+  const scaled = applySvgWidth(base, resolveExportWidth());
+  let output = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
+  if (exportSvgMinifyToggle.checked) {
+    output = minifySvg(output);
+  }
+  try {
+    await writeClipboardText(output);
+    showToast('SVG copied.');
+  } catch {
+    showToast('Copy failed.');
+  }
+}
+
 /**
  * @param {Blob} blob
  * @param {string} filename
@@ -654,6 +675,7 @@ applyPatchBtn.addEventListener('click', applyPatch);
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 copySourceBtn.addEventListener('click', copySource);
+copySvgBtn.addEventListener('click', copySvg);
 renderNowBtn.addEventListener('click', () => renderMermaid(true));
 
 resetBtn.addEventListener('click', () => {
