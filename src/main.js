@@ -78,6 +78,10 @@ const clearHistoryBtn = byId('clear-history');
 const downloadHistoryBtn = byId('download-history');
 /** @type {HTMLButtonElement} */
 const downloadSourceBtn = byId('download-source');
+/** @type {HTMLSelectElement} */
+const exportScaleSelect = byId('export-scale');
+/** @type {HTMLInputElement} */
+const exportTransparentToggle = byId('export-transparent');
 /** @type {HTMLButtonElement} */
 const restoreDraftBtn = byId('restore-draft');
 /** @type {HTMLButtonElement} */
@@ -92,6 +96,7 @@ let toastTimer = null;
 let lastFocusedBeforeDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
+const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
 
 mermaid.initialize({
   startOnLoad: false,
@@ -332,13 +337,18 @@ function exportPng() {
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
+    const scale = Number(exportScaleSelect.value) || 1;
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    if (!exportTransparentToggle.checked) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     canvas.toBlob((blob) => {
       if (blob) {
         downloadBlob(blob, 'diagram.png');
@@ -404,6 +414,23 @@ function escapeHtml(value) {
 }
 
 function init() {
+  const rawPrefs = localStorage.getItem(EXPORT_PREFS_KEY);
+  if (rawPrefs) {
+    try {
+      const prefs = JSON.parse(rawPrefs);
+      if (prefs && typeof prefs === 'object') {
+        if (typeof prefs.scale === 'number') {
+          exportScaleSelect.value = String(prefs.scale);
+        }
+        if (typeof prefs.transparent === 'boolean') {
+          exportTransparentToggle.checked = prefs.transparent;
+        }
+      }
+    } catch {
+      localStorage.removeItem(EXPORT_PREFS_KEY);
+    }
+  }
+
   const storedTheme = localStorage.getItem('theme');
   const prefersDark =
     typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -464,6 +491,15 @@ clearHistoryBtn.addEventListener('click', () => {
 
 downloadHistoryBtn.addEventListener('click', downloadHistory);
 downloadSourceBtn.addEventListener('click', downloadSource);
+
+function persistExportPrefs() {
+  const scale = Number(exportScaleSelect.value) || 1;
+  const transparent = exportTransparentToggle.checked;
+  localStorage.setItem(EXPORT_PREFS_KEY, JSON.stringify({ scale, transparent }));
+}
+
+exportScaleSelect.addEventListener('change', persistExportPrefs);
+exportTransparentToggle.addEventListener('change', persistExportPrefs);
 
 restoreDraftBtn.addEventListener('click', () => {
   const draft = loadDraft();

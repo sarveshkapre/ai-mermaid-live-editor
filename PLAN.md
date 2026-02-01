@@ -16,11 +16,12 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Diff preview stays in sync with editor changes
 - Local draft autosave + restore/clear actions (prevents accidental refresh data loss)
 - Copy/download Mermaid source buttons
+- PNG export controls (scale + transparent background)
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 
 ## Next to ship
-- UX: export controls (transparent PNG option, scale, sizing)
+- UX: export sizing presets + SVG export options
 - Reliability: performance guardrails for very large diffs/diagrams
 - Product: real AI provider integration (OpenAI-compatible) with patch validation
 

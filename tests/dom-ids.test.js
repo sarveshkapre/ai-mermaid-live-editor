@@ -31,6 +31,8 @@ describe('index.html wiring', () => {
       'restore-draft',
       'clear-draft',
       'download-source',
+      'export-scale',
+      'export-transparent',
     ];
 
     requiredIds.forEach((id) => {

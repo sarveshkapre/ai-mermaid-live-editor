@@ -173,6 +173,38 @@ textarea {
   resize: vertical;
 }
 
+select {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  font-size: 13px;
+}
+
+.field.checkbox {
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
 #proposal {
   min-height: 160px;
 }
@@ -249,6 +281,15 @@ textarea {
 .quick-actions {
   display: grid;
   gap: 12px;
+}
+
+.export-controls {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel);
 }
 
 @media (max-width: 820px) {

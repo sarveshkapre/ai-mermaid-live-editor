@@ -92,6 +92,22 @@
             <button id="restore-draft" class="ghost" type="button">Restore draft</button>
             <button id="clear-draft" class="ghost" type="button">Clear draft</button>
             <button id="download-source" class="ghost" type="button">Download Mermaid</button>
+            <div class="export-controls">
+              <div class="label">PNG export</div>
+              <label class="field">
+                <span>Scale</span>
+                <select id="export-scale">
+                  <option value="1">1x</option>
+                  <option value="1.5">1.5x</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                </select>
+              </label>
+              <label class="field checkbox">
+                <input id="export-transparent" type="checkbox" />
+                <span>Transparent background</span>
+              </label>
+            </div>
           </div>
         </div>
       </section>

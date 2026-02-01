@@ -7,6 +7,7 @@
 - Added a smoke test to ensure `index.html` includes required element IDs.
 - Added draft autosave plus restore/clear controls to prevent refresh data loss.
 - Added copy/download Mermaid source actions.
+- Added PNG export controls for scale and transparent background with saved preferences.
 
 ## How to verify
 ```bash
