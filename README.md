@@ -1,6 +1,6 @@
 # AI Mermaid Live Editor
 
-Split-screen Mermaid editor with live rendering plus a patch-driven AI panel for refactors. Local-first, shareable links, and exportable SVG/PNG.
+Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 
 ## Why this exists
 - Iterate on Mermaid diagrams faster with a side-by-side renderer.

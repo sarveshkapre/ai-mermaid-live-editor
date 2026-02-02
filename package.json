@@ -2,7 +2,7 @@
   "name": "ai-mermaid-live-editor",
   "version": "0.1.0",
   "private": true,
-  "description": "Split-screen Mermaid editor with live render and AI patch workflow.",
+  "description": "Split-screen Mermaid editor with live preview and patch-driven AI refactors.",
   "type": "module",
   "scripts": {
     "dev": "vite",
