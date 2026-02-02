@@ -16,6 +16,175 @@ const DEFAULT_DIAGRAM = `flowchart TD
   revise --> model
 `;
 
+const TEMPLATE_LIBRARY = [
+  {
+    id: 'product-launch',
+    title: 'Product launch plan',
+    category: 'Product',
+    summary: 'Align scope, readiness, and rollout milestones.',
+    diagram: `flowchart LR
+  idea([Idea]) --> discovery[Discovery]
+  discovery --> spec[Spec + PRD]
+  spec --> build[Build]
+  build --> review{Launch review}
+  review -->|go| launch[Launch]
+  review -->|hold| iterate[Iterate]
+  iterate --> build
+  launch --> measure[Measure impact]
+`,
+  },
+  {
+    id: 'user-onboarding',
+    title: 'User onboarding funnel',
+    category: 'Growth',
+    summary: 'Track activation steps and drop-offs.',
+    diagram: `flowchart TD
+  visit[Landing page] --> signup[Signup]
+  signup --> verify[Verify email]
+  verify --> tour[Product tour]
+  tour --> activate[First success]
+  activate --> retain[Weekly habit]
+  tour --> dropoff[Drop-off]
+`,
+  },
+  {
+    id: 'system-architecture',
+    title: 'System architecture',
+    category: 'Engineering',
+    summary: 'Show services, data stores, and boundaries.',
+    diagram: `flowchart LR
+  subgraph Client
+    web[Web app]
+    mobile[Mobile app]
+  end
+  subgraph Services
+    api[API gateway]
+    auth[Auth service]
+    worker[Async worker]
+  end
+  web --> api
+  mobile --> api
+  api --> auth
+  api --> worker
+  worker --> db[(Postgres)]
+  auth --> db
+`,
+  },
+  {
+    id: 'incident-response',
+    title: 'Incident response',
+    category: 'Operations',
+    summary: 'Coordinate detection, mitigation, and follow-up.',
+    diagram: `flowchart TD
+  alert[Alert fired] --> triage[On-call triage]
+  triage --> severity{Severity?}
+  severity -->|SEV-1| warroom[Open war room]
+  severity -->|SEV-2| mitigate[Mitigate]
+  warroom --> mitigate
+  mitigate --> update[Stakeholder updates]
+  update --> resolve[Resolve + RCA]
+`,
+  },
+  {
+    id: 'api-sequence',
+    title: 'API request sequence',
+    category: 'Engineering',
+    summary: 'Document a critical request path.',
+    diagram: `sequenceDiagram
+  participant User
+  participant App
+  participant API
+  participant DB
+  User->>App: Trigger action
+  App->>API: POST /resource
+  API->>DB: Write record
+  DB-->>API: Success
+  API-->>App: 201 Created
+  App-->>User: Confirmation
+`,
+  },
+  {
+    id: 'experiment-lifecycle',
+    title: 'Experiment lifecycle',
+    category: 'Research',
+    summary: 'Track hypothesis, rollout, and learnings.',
+    diagram: `stateDiagram-v2
+  [*] --> Ideation
+  Ideation --> Design: Validate problem
+  Design --> Build: Spec approved
+  Build --> Review: QA complete
+  Review --> Launch: Go/no-go
+  Review --> Build: Fixes
+  Launch --> [*]
+`,
+  },
+  {
+    id: 'customer-journey',
+    title: 'Customer journey',
+    category: 'Growth',
+    summary: 'Map touchpoints and experience scores.',
+    diagram: `journey
+  title Customer journey
+  section Discover
+    See landing page: 5: User
+    Read case study: 4: User
+  section Evaluate
+    Request demo: 3: User
+    Security review: 2: User
+  section Adopt
+    Trial kickoff: 4: User
+    Team rollout: 5: User
+`,
+  },
+  {
+    id: 'release-checklist',
+    title: 'Release checklist',
+    category: 'Operations',
+    summary: 'Ensure quality gates before launch.',
+    diagram: `flowchart LR
+  plan[Release plan] --> qa[QA pass]
+  qa --> security[Security review]
+  security --> docs[Docs update]
+  docs --> comms[Customer comms]
+  comms --> deploy[Deploy]
+  deploy --> monitor[Monitor]
+`,
+  },
+];
+
+const PROMPT_RECIPES = [
+  {
+    id: 'swimlanes',
+    title: 'Convert to swimlanes',
+    prompt: 'Reorganize this diagram into swimlanes by team (Product, Engineering, Ops). Keep approvals explicit.',
+  },
+  {
+    id: 'simplify',
+    title: 'Simplify labels',
+    prompt: 'Shorten node labels to 2–4 words while preserving meaning.',
+  },
+  {
+    id: 'failure',
+    title: 'Add failure handling',
+    prompt: 'Add failure paths and retries for each critical step.',
+  },
+  {
+    id: 'metrics',
+    title: 'Add KPIs',
+    prompt: 'Annotate key steps with KPIs like conversion, latency, or error rate.',
+  },
+  {
+    id: 'sequence',
+    title: 'Rewrite as sequence',
+    prompt: 'Rewrite this flow as a sequence diagram showing the main request path.',
+  },
+  {
+    id: 'handoffs',
+    title: 'Highlight handoffs',
+    prompt: 'Emphasize handoffs between teams with explicit approval checkpoints.',
+  },
+];
+
 /**
  * @template T
  * @param {string} id
@@ -34,9 +203,21 @@ const editor = byId('editor');
 /** @type {HTMLDivElement} */
 const preview = byId('preview');
 /** @type {HTMLDivElement} */
+const previewContent = byId('preview-content');
+/** @type {HTMLDivElement} */
 const renderStatus = byId('render-status');
 /** @type {HTMLButtonElement} */
 const renderNowBtn = byId('render-now');
+/** @type {HTMLButtonElement} */
+const focusToggle = byId('focus-toggle');
+/** @type {HTMLButtonElement} */
+const zoomOutBtn = byId('zoom-out');
+/** @type {HTMLButtonElement} */
+const zoomInBtn = byId('zoom-in');
+/** @type {HTMLButtonElement} */
+const zoomResetBtn = byId('zoom-reset');
+/** @type {HTMLSpanElement} */
+const zoomLabel = byId('zoom-label');
 /** @type {HTMLDivElement} */
 const stats = byId('stats');
 /** @type {HTMLTextAreaElement} */
@@ -59,6 +240,16 @@ const shortcutsDialog = byId('shortcuts-dialog');
 const shortcutsClose = byId('shortcuts-close');
 /** @type {HTMLDivElement} */
 const toast = byId('toast');
+/** @type {HTMLDivElement} */
+const templateGrid = byId('template-grid');
+/** @type {HTMLInputElement} */
+const templateSearch = byId('template-search');
+/** @type {HTMLDivElement} */
+const templateFilters = byId('template-filters');
+/** @type {HTMLDivElement} */
+const templateEmpty = byId('template-empty');
+/** @type {HTMLDivElement} */
+const promptRecipes = byId('prompt-recipes');
 
 /** @type {HTMLButtonElement} */
 const commitBtn = byId('commit');
@@ -124,6 +315,11 @@ let toastTimer = null;
 let lastFocusedBeforeDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
+let previewScale = 1;
+let activeTemplateId = null;
+let activeTemplateFilter = 'All';
+let templateQuery = '';
+const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
 const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
 const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
 const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
@@ -153,6 +349,19 @@ function showToast(message) {
   }, 2200);
 }
 
+/**
+ * @param {string} title
+ * @param {string} message
+ */
+function setPreviewMessage(title, message) {
+  previewContent.innerHTML = `
+    <div class="empty-state">
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
+}
+
 function updateStats() {
   const text = editor.value;
   const lines = text.split('\n').length;
@@ -162,33 +371,167 @@ function updateStats() {
 }
 
 /**
+ * @param {number} next
+ */
+function setPreviewScale(next) {
+  const clamped = Math.max(0.5, Math.min(2.5, Math.round(next * 10) / 10));
+  previewScale = clamped;
+  preview.style.setProperty('--preview-scale', String(clamped));
+  zoomLabel.textContent = `${Math.round(clamped * 100)}%`;
+}
+
+function toggleFocusMode(force) {
+  const next =
+    typeof force === 'boolean' ? force : !document.body.classList.contains('focus-mode');
+  document.body.classList.toggle('focus-mode', next);
+  focusToggle.textContent = next ? 'Exit focus' : 'Focus';
+  focusToggle.setAttribute('aria-pressed', String(next));
+  if (next) {
+    preview.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+}
+
+function renderPromptRecipes() {
+  promptRecipes.innerHTML = '';
+  PROMPT_RECIPES.forEach((recipe) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip';
+    btn.textContent = recipe.title;
+    btn.title = recipe.prompt;
+    btn.addEventListener('click', () => {
+      const current = instructions.value.trim();
+      instructions.value = current ? `${current}\n${recipe.prompt}` : recipe.prompt;
+      instructions.focus();
+      showToast(`Prompt added: ${recipe.title}.`);
+    });
+    promptRecipes.appendChild(btn);
+  });
+}
+
+function getTemplateFilters() {
+  const categories = Array.from(new Set(TEMPLATE_LIBRARY.map((item) => item.category)));
+  return ['All', ...categories];
+}
+
+function renderTemplateFilters() {
+  templateFilters.innerHTML = '';
+  getTemplateFilters().forEach((filter) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `chip${activeTemplateFilter === filter ? ' is-active' : ''}`;
+    btn.textContent = filter;
+    btn.setAttribute('aria-pressed', String(activeTemplateFilter === filter));
+    btn.addEventListener('click', () => {
+      activeTemplateFilter = filter;
+      renderTemplateFilters();
+      renderTemplates();
+    });
+    templateFilters.appendChild(btn);
+  });
+}
+
+/**
+ * @param {string} diagram
+ */
+function getTemplatePreview(diagram) {
+  return diagram.trim().split('\n').slice(0, 6).join('\n');
+}
+
+/**
+ * @param {{id:string,title:string,category:string,summary:string,diagram:string}} template
+ */
+function applyTemplate(template) {
+  const current = editor.value.trim();
+  const next = template.diagram.trim();
+  const isDefault = current === DEFAULT_DIAGRAM.trim();
+  if (current && current !== next && !isDefault) {
+    if (!confirm(`Replace the current diagram with "${template.title}"?`)) return;
+  }
+  editor.value = next;
+  activeTemplateId = template.id;
+  localStorage.setItem(TEMPLATE_ACTIVE_KEY, template.id);
+  scheduleRender();
+  renderTemplates();
+  showToast(`Loaded template: ${template.title}.`);
+}
+
+function matchesTemplate(template) {
+  const query = templateQuery.trim().toLowerCase();
+  const matchesFilter =
+    activeTemplateFilter === 'All' || template.category === activeTemplateFilter;
+  if (!matchesFilter) return false;
+  if (!query) return true;
+  return (
+    template.title.toLowerCase().includes(query) ||
+    template.summary.toLowerCase().includes(query) ||
+    template.category.toLowerCase().includes(query)
+  );
+}
+
+function renderTemplates() {
+  const items = TEMPLATE_LIBRARY.filter(matchesTemplate);
+  templateGrid.innerHTML = '';
+  templateEmpty.hidden = items.length > 0;
+  items.forEach((template) => {
+    const card = document.createElement('div');
+    card.className = `template-card${activeTemplateId === template.id ? ' is-active' : ''}`;
+    card.innerHTML = `
+      <div class="template-meta">
+        <div>
+          <h3>${escapeHtml(template.title)}</h3>
+          <div class="hint">${escapeHtml(template.summary)}</div>
+        </div>
+        <span class="template-pill">${escapeHtml(template.category)}</span>
+      </div>
+      <pre>${escapeHtml(getTemplatePreview(template.diagram))}</pre>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'template-actions';
+    const useBtn = document.createElement('button');
+    useBtn.type = 'button';
+    useBtn.className = 'ghost';
+    useBtn.textContent = 'Use template';
+    useBtn.addEventListener('click', () => applyTemplate(template));
+    actions.appendChild(useBtn);
+    card.appendChild(actions);
+    templateGrid.appendChild(card);
+  });
+}
+
+/**
  * @param {boolean=} force
  */
 async function renderMermaid(force = false) {
   const code = editor.value.trim();
   if (!code) {
-    preview.innerHTML = '';
+    lastSvg = '';
+    setPreviewMessage('Start with a template', 'Choose a starter above or begin typing Mermaid.');
     renderStatus.textContent = 'Empty diagram';
     exportSummary.textContent = 'Export summary updates after render.';
     return;
   }
   if (isTooLargeForRender(code) && !force) {
+    lastSvg = '';
     renderStatus.textContent = 'Large diagram: rendering paused. Click Render now.';
     exportSummary.textContent = 'Export summary paused for large diagrams.';
+    setPreviewMessage('Rendering paused', 'This diagram is large. Click Render now to preview it.');
     return;
   }
   try {
     renderStatus.textContent = force && isTooLargeForRender(code) ? 'Rendering large diagram…' : 'Rendering…';
     const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
     lastSvg = svg;
-    preview.innerHTML = svg;
+    previewContent.innerHTML = svg;
     renderStatus.textContent = 'Rendered';
     updateExportSummary();
   } catch (error) {
-    preview.textContent = '';
+    lastSvg = '';
+    previewContent.innerHTML = '';
     const message = error instanceof Error ? error.message : String(error);
     renderStatus.textContent = `Error: ${message}`;
     exportSummary.textContent = 'Export summary unavailable.';
+    setPreviewMessage('Rendering error', 'Fix the Mermaid syntax to see the preview.');
   }
 }
 
@@ -860,6 +1203,11 @@ function init() {
   resolveExportWidth();
   loadPresetOptions();
   renderExportHistory();
+  renderPromptRecipes();
+  activeTemplateId = localStorage.getItem(TEMPLATE_ACTIVE_KEY);
+  renderTemplateFilters();
+  renderTemplates();
+  setPreviewScale(1);
 
   const storedTheme = localStorage.getItem('theme');
   const prefersDark =
@@ -899,6 +1247,10 @@ function init() {
 
 editor.addEventListener('input', scheduleRender);
 proposal.addEventListener('input', updateDiff);
+templateSearch.addEventListener('input', () => {
+  templateQuery = templateSearch.value;
+  renderTemplates();
+});
 
 commitBtn.addEventListener('click', commitSnapshot);
 simulateBtn.addEventListener('click', simulatePatch);
@@ -909,6 +1261,10 @@ copySourceBtn.addEventListener('click', copySource);
 copySvgBtn.addEventListener('click', copySvg);
 copyPngBtn.addEventListener('click', copyPng);
 renderNowBtn.addEventListener('click', () => renderMermaid(true));
+focusToggle.addEventListener('click', () => toggleFocusMode());
+zoomOutBtn.addEventListener('click', () => setPreviewScale(previewScale - 0.1));
+zoomInBtn.addEventListener('click', () => setPreviewScale(previewScale + 0.1));
+zoomResetBtn.addEventListener('click', () => setPreviewScale(1));
 
 document.querySelectorAll('[data-action]').forEach((button) => {
   if (!(button instanceof HTMLButtonElement)) return;
@@ -922,6 +1278,9 @@ document.querySelectorAll('[data-action]').forEach((button) => {
 resetBtn.addEventListener('click', () => {
   if (!confirm('Reset editor to the starter diagram?')) return;
   editor.value = DEFAULT_DIAGRAM.trim();
+  activeTemplateId = null;
+  localStorage.removeItem(TEMPLATE_ACTIVE_KEY);
+  renderTemplates();
   scheduleRender();
 });
 
@@ -1023,6 +1382,21 @@ window.addEventListener('keydown', (event) => {
   if (isCmd && event.key.toLowerCase() === 's') {
     event.preventDefault();
     commitSnapshot();
+  }
+  if (!isCmd && event.key.toLowerCase() === 'f') {
+    const target = event.target;
+    const isEditable =
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLInputElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+    if (!isEditable) {
+      event.preventDefault();
+      toggleFocusMode();
+    }
+  }
+  if (event.key === 'Escape' && document.body.classList.contains('focus-mode')) {
+    event.preventDefault();
+    toggleFocusMode(false);
   }
   if (!isCmd && event.key === '?' && !shortcutsDialog.open) {
     const target = event.target;

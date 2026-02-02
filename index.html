@@ -22,8 +22,25 @@
         </div>
       </header>
 
-      <section class="workspace">
-        <div class="panel">
+      <section class="workspace" id="workspace-start">
+        <div class="panel template-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Starter templates</h2>
+              <div class="hint">Pick a proven structure, then customize it.</div>
+            </div>
+            <div class="template-search">
+              <input id="template-search" type="search" placeholder="Search templates" />
+            </div>
+          </div>
+          <div id="template-filters" class="template-filters"></div>
+          <div id="template-grid" class="template-grid"></div>
+          <div id="template-empty" class="hint" hidden>No templates match your search.</div>
+        </div>
+      </section>
+
+      <section class="workspace" id="workspace-editor">
+        <div class="panel" id="editor-panel">
           <div class="panel-head">
             <h2>Mermaid editor</h2>
             <div class="hint">Live render with inline errors. Ctrl/Cmd + Enter to apply patch.</div>
@@ -40,15 +57,28 @@
           <div class="stats" id="stats"></div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="render-panel">
           <div class="panel-head">
-            <h2>Live render</h2>
-            <div class="render-actions">
+            <div>
+              <h2>Live render</h2>
               <div class="hint" id="render-status" role="status" aria-live="polite" aria-atomic="true">Ready</div>
+            </div>
+            <div class="render-actions">
               <button id="render-now" class="ghost" type="button">Render now</button>
+              <button id="focus-toggle" class="ghost" type="button" aria-pressed="false">Focus</button>
             </div>
           </div>
-          <div id="preview" class="preview"></div>
+          <div class="render-toolbar">
+            <div class="zoom-controls">
+              <button id="zoom-out" class="ghost" type="button" aria-label="Zoom out">−</button>
+              <span id="zoom-label" class="hint">100%</span>
+              <button id="zoom-in" class="ghost" type="button" aria-label="Zoom in">+</button>
+              <button id="zoom-reset" class="ghost" type="button">Reset</button>
+            </div>
+          </div>
+          <div id="preview" class="preview">
+            <div id="preview-content" class="preview-content"></div>
+          </div>
           <div class="render-exports">
             <div id="export-summary" class="hint">Export summary updates after render.</div>
             <div class="toolbar">
@@ -61,12 +91,14 @@
         </div>
       </section>
 
-      <section class="workspace">
+      <section class="workspace" id="workspace-ai">
         <div class="panel">
           <div class="panel-head">
             <h2>AI patch studio</h2>
             <div class="hint">Paste or generate patch proposals, then apply with preview.</div>
           </div>
+          <div class="label">Prompt recipes</div>
+          <div id="prompt-recipes" class="prompt-recipes"></div>
           <label class="label" for="instructions">Instructions</label>
           <textarea id="instructions" placeholder="Refactor the flow into swimlanes with explicit approvals."></textarea>
           <div class="toolbar">
@@ -86,7 +118,7 @@
         </div>
       </section>
 
-      <section class="workspace">
+      <section class="workspace" id="workspace-ops">
         <div class="panel">
           <div class="panel-head">
             <h2>Commit timeline</h2>
@@ -192,6 +224,14 @@
         <div class="shortcut-row">
           <kbd>?</kbd>
           <span>Open shortcuts</span>
+        </div>
+        <div class="shortcut-row">
+          <kbd>F</kbd>
+          <span>Toggle focus mode</span>
+        </div>
+        <div class="shortcut-row">
+          <kbd>Esc</kbd>
+          <span>Exit focus mode</span>
         </div>
         <p class="hint">Shortcuts work from anywhere; Ctrl/Cmd + S overrides the browser save dialog.</p>
       </div>

@@ -92,6 +92,17 @@ h1 {
   align-items: center;
 }
 
+input[type="search"] {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  min-width: 220px;
+}
+
 button {
   border: none;
   border-radius: 999px;
@@ -155,10 +166,120 @@ button.ghost {
   font-size: 18px;
 }
 
+.template-panel .panel-head {
+  align-items: center;
+}
+
+.template-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.template-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: none;
+}
+
+.chip.is-active {
+  background: color-mix(in oklab, var(--accent) 18%, var(--bg-alt));
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.template-card {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 180px;
+}
+
+.template-card h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.template-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.template-pill {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.template-card pre {
+  margin: 0;
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  white-space: pre-wrap;
+}
+
+.template-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.template-card.is-active {
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--border));
+  box-shadow: 0 16px 36px rgba(255, 122, 79, 0.18);
+}
+
 .render-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.render-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.zoom-controls button {
+  padding: 6px 12px;
+  font-size: 12px;
 }
 
 .render-exports {
@@ -248,6 +369,12 @@ select {
   min-height: 160px;
 }
 
+.prompt-recipes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .label {
   font-size: 12px;
   text-transform: uppercase;
@@ -268,6 +395,31 @@ select {
   border: 1px solid var(--border);
   padding: 16px;
   overflow: auto;
+  position: relative;
+}
+
+.preview-content {
+  transform: scale(var(--preview-scale, 1));
+  transform-origin: top left;
+  width: fit-content;
+}
+
+.preview-content .empty-state {
+  max-width: 380px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: var(--panel);
+}
+
+.preview-content .empty-state h3 {
+  margin: 0 0 8px;
+}
+
+.preview-content .empty-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .stats {
@@ -338,6 +490,26 @@ select {
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--panel);
+}
+
+body.focus-mode .hero,
+body.focus-mode #workspace-start,
+body.focus-mode #editor-panel,
+body.focus-mode #workspace-ai,
+body.focus-mode #workspace-ops {
+  display: none;
+}
+
+body.focus-mode .app {
+  max-width: 1400px;
+}
+
+body.focus-mode #render-panel {
+  grid-column: 1 / -1;
+}
+
+body.focus-mode .preview {
+  min-height: 70vh;
 }
 
 @media (max-width: 820px) {
