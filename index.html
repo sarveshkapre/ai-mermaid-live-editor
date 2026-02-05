@@ -20,6 +20,7 @@
           <button id="theme-toggle" class="ghost" type="button">Toggle theme</button>
           <button id="copy-link" type="button">Copy share link</button>
         </div>
+        <div id="readonly-banner" class="banner" hidden>Read-only snapshot</div>
       </header>
 
       <section class="workspace" id="workspace-start">
@@ -37,6 +38,30 @@
           <div id="template-grid" class="template-grid"></div>
           <div id="template-empty" class="hint" hidden>No templates match your search.</div>
         </div>
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Project brief</h2>
+              <div class="hint">Keep context with your diagram exports.</div>
+            </div>
+          </div>
+          <label class="label" for="project-title">Project title</label>
+          <input id="project-title" type="text" placeholder="e.g. Pricing revamp" />
+          <label class="label" for="project-audience">Audience</label>
+          <input id="project-audience" type="text" placeholder="e.g. Exec review" />
+          <label class="label" for="project-owner">Owner</label>
+          <input id="project-owner" type="text" placeholder="e.g. You / team" />
+          <label class="label" for="project-purpose">Purpose</label>
+          <textarea id="project-purpose" placeholder="What decision does this diagram support?"></textarea>
+          <label class="field checkbox">
+            <input id="use-filenames" type="checkbox" />
+            <span>Use project + tab name in filenames</span>
+          </label>
+          <div class="toolbar">
+            <button id="copy-snapshot" type="button">Copy snapshot link</button>
+            <button id="download-bundle" class="ghost" type="button">Download bundle</button>
+          </div>
+        </div>
       </section>
 
       <section class="workspace" id="workspace-editor">
@@ -44,6 +69,15 @@
           <div class="panel-head">
             <h2>Mermaid editor</h2>
             <div class="hint">Live render with inline errors. Ctrl/Cmd + Enter to apply patch.</div>
+          </div>
+          <div class="tabs" id="tabs">
+            <div class="tab-list" id="tab-list"></div>
+            <div class="tab-actions">
+              <button id="add-tab" class="ghost" type="button">New tab</button>
+              <button id="duplicate-tab" class="ghost" type="button">Duplicate</button>
+              <button id="rename-tab" class="ghost" type="button">Rename</button>
+              <button id="delete-tab" class="ghost" type="button">Delete</button>
+            </div>
           </div>
           <textarea id="editor" spellcheck="false"></textarea>
           <div class="toolbar">
@@ -55,6 +89,7 @@
             <button id="copy-png" class="ghost" type="button">Copy PNG</button>
           </div>
           <div class="stats" id="stats"></div>
+          <div class="hint" id="health"></div>
         </div>
 
         <div class="panel" id="render-panel">
@@ -65,6 +100,7 @@
             </div>
             <div class="render-actions">
               <button id="render-now" class="ghost" type="button">Render now</button>
+              <button id="jump-error" class="ghost" type="button" hidden>Jump to error</button>
               <button id="focus-toggle" class="ghost" type="button" aria-pressed="false">Focus</button>
             </div>
           </div>

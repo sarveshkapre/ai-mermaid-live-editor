@@ -92,6 +92,7 @@ h1 {
   align-items: center;
 }
 
+input[type="text"],
 input[type="search"] {
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -100,6 +101,10 @@ input[type="search"] {
   color: var(--text);
   font-family: var(--font);
   font-size: 13px;
+  width: 100%;
+}
+
+input[type="search"] {
   min-width: 220px;
 }
 
@@ -164,6 +169,16 @@ button.ghost {
 .panel-head h2 {
   margin: 0;
   font-size: 18px;
+}
+
+.banner {
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent) 16%, var(--panel));
+  font-size: 12px;
+  color: var(--text);
 }
 
 .template-panel .panel-head {
@@ -375,6 +390,42 @@ select {
   gap: 8px;
 }
 
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.tab-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tab {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.tab.is-active {
+  background: color-mix(in oklab, var(--accent) 20%, var(--panel));
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+
+.tab-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .label {
   font-size: 12px;
   text-transform: uppercase;
@@ -510,6 +561,20 @@ body.focus-mode #render-panel {
 
 body.focus-mode .preview {
   min-height: 70vh;
+}
+
+body.read-only .tab-actions button,
+body.read-only #apply-patch,
+body.read-only #simulate,
+body.read-only #commit,
+body.read-only #clear-history,
+body.read-only #reset,
+body.read-only #save-preset,
+body.read-only #delete-preset,
+body.read-only #download-history,
+body.read-only #clear-draft,
+body.read-only #restore-draft {
+  display: none;
 }
 
 @media (max-width: 820px) {
