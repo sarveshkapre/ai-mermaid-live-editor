@@ -17,3 +17,7 @@
 - UX: export summary with estimated sizes
 - UX: copy PNG action + compact export panel
 - UX: export presets and recent export history
+- Reliability: patch proposals are validated before apply, with Mermaid line-aware error feedback
+- Reliability: sanitize malformed tab localStorage payloads during startup
+- CI: fixed strict typecheck regressions in `src/main.js` and added helper unit tests
+- CI: workflow now uses `npm ci` with npm cache for deterministic installs

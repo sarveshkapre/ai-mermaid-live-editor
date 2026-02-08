@@ -25,6 +25,8 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Export summary with estimated output sizes
 - Export presets per diagram + recent export history
 - Dark mode and keyboard shortcuts
+- Patch validation before apply (line-aware Mermaid errors)
+- Tab persistence recovery for malformed local state
 
 ## Quickstart
 ```bash

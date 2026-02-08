@@ -2,7 +2,7 @@
 
 ## Near-term
 - AI provider connector (OpenAI-compatible)
-- Patch validation and rollback hints
+- Patch rollback hints (one-click revert after failed/undesired patch)
 - Export history as JSON
 
 ## Later

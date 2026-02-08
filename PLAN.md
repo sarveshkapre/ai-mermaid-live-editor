@@ -28,10 +28,16 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Confirm prompts for destructive actions (reset, clear history)
 - Added a wiring test to ensure `index.html` contains required element IDs
 
+## Shipped (2026-02-08)
+- Patch proposals are validated before apply; invalid Mermaid is blocked with line-aware feedback.
+- Tab state loading now sanitizes malformed localStorage data instead of trusting raw payloads.
+- CI stability fixed for strict JS type-checking in `src/main.js` (no implicit `any` regressions).
+- Added unit coverage for tab normalization and Mermaid error parsing helpers.
+
 ## Next to ship
 - UX: export sizing presets
 - Reliability: performance guardrails for very large diffs/diagrams
-- Product: real AI provider integration (OpenAI-compatible) with patch validation
+- Product: real AI provider integration (OpenAI-compatible)
 
 ## Top risks / unknowns
 - Mermaid render performance on very large diagrams
