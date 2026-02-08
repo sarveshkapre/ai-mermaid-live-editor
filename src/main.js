@@ -3,6 +3,8 @@ import { diffLines } from './lib/diff.js';
 import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
+import { errorToMessage, extractMermaidErrorLine } from './lib/mermaid-error.js';
+import { normalizeTabsState } from './lib/tabs.js';
 
 const DEFAULT_DIAGRAM = `flowchart TD
   start([Start]) --> ingest{Ingest}
@@ -186,6 +188,22 @@ const PROMPT_RECIPES = [
 ];
 
 /**
+ * @typedef {{id: string, title: string, diagram: string, createdAt: number, updatedAt: number}} DiagramTab
+ */
+
+/**
+ * @typedef {{id: string, title: string, category: string, summary: string, diagram: string}} DiagramTemplate
+ */
+
+/**
+ * @typedef {{title: string, audience: string, owner: string, purpose: string, useFilenames: boolean}} ProjectPayload
+ */
+
+/**
+ * @typedef {{diagram: string, tabTitle: string, project: unknown}} SnapshotPayload
+ */
+
+/**
  * @template T
  * @param {string} id
  * @returns {T}
@@ -345,12 +363,19 @@ let toastTimer = null;
 let lastFocusedBeforeDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
+/** @type {number} */
 let previewScale = 1;
+/** @type {string | null} */
 let activeTemplateId = null;
+/** @type {string} */
 let activeTemplateFilter = 'All';
+/** @type {string} */
 let templateQuery = '';
+/** @type {string | null} */
 let activeTabId = null;
+/** @type {DiagramTab[]} */
 let tabs = [];
+/** @type {number | null} */
 let lastErrorLine = null;
 let isReadOnly = false;
 const TABS_KEY = 'ai-mermaid-tabs';
@@ -418,6 +443,7 @@ function encodeSnapshot(payload) {
 
 /**
  * @param {string} hash
+ * @returns {unknown | null}
  */
 function decodeSnapshot(hash) {
   if (!hash.startsWith(SHARE_SNAPSHOT_KEY)) return null;
@@ -443,24 +469,38 @@ function setPreviewMessage(title, message) {
   `;
 }
 
+/**
+ * @returns {ProjectPayload | null}
+ */
 function loadProject() {
   const raw = localStorage.getItem(PROJECT_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : null;
+    if (!parsed || typeof parsed !== 'object') return null;
+    const data = /** @type {Record<string, unknown>} */ (parsed);
+    return {
+      title: typeof data.title === 'string' ? data.title : '',
+      audience: typeof data.audience === 'string' ? data.audience : '',
+      owner: typeof data.owner === 'string' ? data.owner : '',
+      purpose: typeof data.purpose === 'string' ? data.purpose : '',
+      useFilenames: typeof data.useFilenames === 'boolean' ? data.useFilenames : false,
+    };
   } catch {
     return null;
   }
 }
 
 /**
- * @param {Record<string, unknown>} payload
+ * @param {ProjectPayload} payload
  */
 function saveProject(payload) {
   localStorage.setItem(PROJECT_KEY, JSON.stringify(payload));
 }
 
+/**
+ * @returns {ProjectPayload}
+ */
 function getProjectPayload() {
   return {
     title: projectTitleInput.value.trim(),
@@ -471,13 +511,31 @@ function getProjectPayload() {
   };
 }
 
+/**
+ * @param {unknown} payload
+ */
 function applyProjectPayload(payload) {
   if (!payload || typeof payload !== 'object') return;
-  if (typeof payload.title === 'string') projectTitleInput.value = payload.title;
-  if (typeof payload.audience === 'string') projectAudienceInput.value = payload.audience;
-  if (typeof payload.owner === 'string') projectOwnerInput.value = payload.owner;
-  if (typeof payload.purpose === 'string') projectPurposeInput.value = payload.purpose;
-  if (typeof payload.useFilenames === 'boolean') useFilenamesToggle.checked = payload.useFilenames;
+  const data = /** @type {Record<string, unknown>} */ (payload);
+  if (typeof data.title === 'string') projectTitleInput.value = data.title;
+  if (typeof data.audience === 'string') projectAudienceInput.value = data.audience;
+  if (typeof data.owner === 'string') projectOwnerInput.value = data.owner;
+  if (typeof data.purpose === 'string') projectPurposeInput.value = data.purpose;
+  if (typeof data.useFilenames === 'boolean') useFilenamesToggle.checked = data.useFilenames;
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {SnapshotPayload | null}
+ */
+function normalizeSnapshotPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const data = /** @type {Record<string, unknown>} */ (payload);
+  return {
+    diagram: typeof data.diagram === 'string' ? data.diagram : '',
+    tabTitle: typeof data.tabTitle === 'string' && data.tabTitle.trim() ? data.tabTitle : 'Snapshot',
+    project: data.project,
+  };
 }
 
 /**
@@ -491,6 +549,9 @@ function slugify(value) {
     .slice(0, 50);
 }
 
+/**
+ * @returns {DiagramTab | null}
+ */
 function getActiveTab() {
   return tabs.find((tab) => tab.id === activeTabId) || null;
 }
@@ -505,29 +566,21 @@ function getExportBaseName() {
 
 function loadTabs() {
   const raw = localStorage.getItem(TABS_KEY);
+  let parsedTabs = null;
   if (raw) {
     try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) {
-        tabs = parsed;
-        activeTabId = localStorage.getItem(ACTIVE_TAB_KEY) || parsed[0].id;
-        return;
-      }
+      parsedTabs = JSON.parse(raw);
     } catch {
       localStorage.removeItem(TABS_KEY);
     }
   }
-  const now = Date.now();
-  tabs = [
-    {
-      id: crypto.randomUUID(),
-      title: 'Main diagram',
-      diagram: DEFAULT_DIAGRAM.trim(),
-      createdAt: now,
-      updatedAt: now,
-    },
-  ];
-  activeTabId = tabs[0].id;
+  const state = normalizeTabsState(
+    parsedTabs,
+    localStorage.getItem(ACTIVE_TAB_KEY),
+    DEFAULT_DIAGRAM.trim(),
+  );
+  tabs = state.tabs;
+  activeTabId = state.activeTabId;
   persistTabs();
 }
 
@@ -550,6 +603,9 @@ function renderTabs() {
   });
 }
 
+/**
+ * @param {string} tabId
+ */
 function setActiveTab(tabId) {
   if (activeTabId === tabId) return;
   if (!isReadOnly) updateActiveTabFromEditor();
@@ -693,6 +749,9 @@ function jumpToError() {
   editor.scrollTop = Math.max(0, targetIndex * lineHeight - editor.clientHeight / 3);
 }
 
+/**
+ * @param {boolean=} force
+ */
 function toggleFocusMode(force) {
   const next =
     typeof force === 'boolean' ? force : !document.body.classList.contains('focus-mode');
@@ -788,7 +847,7 @@ function getTemplatePreview(diagram) {
 }
 
 /**
- * @param {{id:string,title:string,category:string,summary:string,diagram:string}} template
+ * @param {DiagramTemplate} template
  */
 function applyTemplate(template) {
   if (isReadOnly) return;
@@ -806,6 +865,9 @@ function applyTemplate(template) {
   showToast(`Loaded template: ${template.title}.`);
 }
 
+/**
+ * @param {DiagramTemplate} template
+ */
 function matchesTemplate(template) {
   const query = templateQuery.trim().toLowerCase();
   const matchesFilter =
@@ -881,12 +943,11 @@ async function renderMermaid(force = false) {
   } catch (error) {
     lastSvg = '';
     previewContent.innerHTML = '';
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorToMessage(error);
     renderStatus.textContent = `Error: ${message}`;
     exportSummary.textContent = 'Export summary unavailable.';
     setPreviewMessage('Rendering error', 'Fix the Mermaid syntax to see the preview.');
-    const match = message.match(/line\s+(\d+)/i);
-    setErrorLine(match ? Number(match[1]) : null);
+    setErrorLine(extractMermaidErrorLine(message));
   }
 }
 
@@ -964,13 +1025,37 @@ function updateDiff() {
     .join('');
 }
 
-function applyPatch() {
+/**
+ * @param {string} code
+ * @returns {Promise<{ok: true} | {ok: false, message: string, line: number | null}>}
+ */
+async function validatePatchProposal(code) {
+  try {
+    await mermaid.parse(code);
+    return { ok: true };
+  } catch (error) {
+    const message = errorToMessage(error);
+    return { ok: false, message, line: extractMermaidErrorLine(message) };
+  }
+}
+
+async function applyPatch() {
   if (isReadOnly) return;
-  if (!proposal.value.trim()) {
+  const next = proposal.value.trim();
+  if (!next) {
     return;
   }
-  editor.value = proposal.value.trim();
+  const validation = await validatePatchProposal(next);
+  if (!validation.ok) {
+    renderStatus.textContent = `Patch invalid: ${validation.message}`;
+    setPreviewMessage('Patch validation failed', 'Fix Mermaid errors in the proposal before applying.');
+    setErrorLine(validation.line);
+    showToast('Patch contains Mermaid errors.');
+    return;
+  }
+  editor.value = next;
   scheduleRender();
+  showToast('Patch applied.');
 }
 
 function renderTimeline() {
@@ -1631,18 +1716,17 @@ function init() {
 
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash.replace('#', '');
-  const snapshot = decodeSnapshot(hash);
+  const snapshot = normalizeSnapshotPayload(decodeSnapshot(hash));
   isReadOnly = params.get('mode') === 'readonly' || params.get('ro') === '1' || Boolean(snapshot);
   applyReadOnlyMode();
 
   if (snapshot) {
     const now = Date.now();
-    const tabTitle = typeof snapshot.tabTitle === 'string' ? snapshot.tabTitle : 'Snapshot';
     tabs = [
       {
         id: crypto.randomUUID(),
-        title: tabTitle,
-        diagram: typeof snapshot.diagram === 'string' ? snapshot.diagram : '',
+        title: snapshot.tabTitle,
+        diagram: snapshot.diagram,
         createdAt: now,
         updatedAt: now,
       },
@@ -1725,7 +1809,9 @@ useFilenamesToggle.addEventListener('change', persistProject);
 
 commitBtn.addEventListener('click', commitSnapshot);
 simulateBtn.addEventListener('click', simulatePatch);
-applyPatchBtn.addEventListener('click', applyPatch);
+applyPatchBtn.addEventListener('click', () => {
+  void applyPatch();
+});
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 copySourceBtn.addEventListener('click', copySource);
@@ -1838,7 +1924,12 @@ function openShortcuts() {
 }
 
 function closeShortcuts() {
-  shortcutsDialog.close();
+  if (typeof shortcutsDialog.close === 'function') {
+    shortcutsDialog.close();
+  } else {
+    shortcutsDialog.removeAttribute('open');
+    (lastFocusedBeforeDialog || helpBtn).focus();
+  }
 }
 
 helpBtn.addEventListener('click', openShortcuts);
@@ -1851,7 +1942,7 @@ window.addEventListener('keydown', (event) => {
   const isCmd = event.metaKey || event.ctrlKey;
   if (isCmd && event.key === 'Enter') {
     event.preventDefault();
-    applyPatch();
+    void applyPatch();
   }
   if (isCmd && event.key.toLowerCase() === 's') {
     event.preventDefault();
