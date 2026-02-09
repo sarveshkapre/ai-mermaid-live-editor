@@ -329,6 +329,10 @@ const downloadHistoryBtn = byId('download-history');
 const downloadSourceBtn = byId('download-source');
 /** @type {HTMLButtonElement} */
 const downloadExportHistoryBtn = byId('download-export-history');
+/** @type {HTMLButtonElement} */
+const importFileBtn = byId('import-file-btn');
+/** @type {HTMLInputElement} */
+const importFileInput = byId('import-file');
 /** @type {HTMLSelectElement} */
 const exportScaleSelect = byId('export-scale');
 /** @type {HTMLSelectElement} */
@@ -397,6 +401,7 @@ const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
 const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
 const DIFF_LIMITS = { maxChars: 15000, maxLines: 800 };
 const RENDER_LIMITS = { maxChars: 20000, maxLines: 1000 };
+const IMPORT_LIMITS = { maxBytes: 250_000 };
 
 /**
  * @param {string} message
@@ -566,6 +571,56 @@ function getExportBaseName() {
   if (!useFilenamesToggle.checked) return 'diagram';
   const parts = [project, tab].filter(Boolean).map(slugify).filter(Boolean);
   return parts.length ? parts.join('_') : 'diagram';
+}
+
+/**
+ * @param {string} filename
+ */
+function tabTitleFromFilename(filename) {
+  const trimmed = filename.trim();
+  if (!trimmed) return 'Imported diagram';
+  const base = trimmed.replace(/\.[^.]+$/, '');
+  const cleaned = base.trim().slice(0, 40);
+  return cleaned || 'Imported diagram';
+}
+
+/**
+ * @param {string} title
+ * @param {string} diagram
+ */
+function addImportedTab(title, diagram) {
+  const now = Date.now();
+  const nextDiagram = diagram.trim() || DEFAULT_DIAGRAM.trim();
+  const newTab = {
+    id: crypto.randomUUID(),
+    title: title.trim().slice(0, 40) || `Diagram ${tabs.length + 1}`,
+    diagram: nextDiagram,
+    createdAt: now,
+    updatedAt: now,
+  };
+  tabs.push(newTab);
+  setActiveTab(newTab.id);
+  renderTabs();
+  showToast(`Imported "${newTab.title}".`);
+}
+
+async function importMermaidFromFile() {
+  if (isReadOnly) return;
+  const file = importFileInput.files && importFileInput.files[0] ? importFileInput.files[0] : null;
+  if (!file) return;
+  importFileInput.value = '';
+
+  if (file.size > IMPORT_LIMITS.maxBytes) {
+    showToast(`File too large to import (max ${Math.round(IMPORT_LIMITS.maxBytes / 1000)}kB).`);
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    addImportedTab(tabTitleFromFilename(file.name), text);
+  } catch {
+    showToast('Import failed. Could not read file.');
+  }
 }
 
 function loadTabs() {
@@ -838,6 +893,7 @@ function applyReadOnlyMode() {
     restoreDraftBtn,
     clearDraftBtn,
     downloadSourceBtn,
+    importFileBtn,
     addTabBtn,
     duplicateTabBtn,
     renameTabBtn,
@@ -1998,6 +2054,10 @@ clearHistoryBtn.addEventListener('click', () => {
 downloadHistoryBtn.addEventListener('click', downloadHistory);
 downloadExportHistoryBtn.addEventListener('click', downloadExportHistory);
 downloadSourceBtn.addEventListener('click', downloadSource);
+importFileBtn.addEventListener('click', () => importFileInput.click());
+importFileInput.addEventListener('change', () => {
+  void importMermaidFromFile();
+});
 
 function persistExportPrefs() {
   const prefs = collectExportPrefs();

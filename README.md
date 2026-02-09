@@ -15,6 +15,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Shareable links (URL hash)
 - SVG/PNG export
 - Preview zoom with space-drag pan
+- Import Mermaid files into tabs
 - Draft autosave with restore/clear
 - Copy/download Mermaid source
 - PNG export controls (scale, transparency)

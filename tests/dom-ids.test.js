@@ -60,6 +60,8 @@ describe('index.html wiring', () => {
       'restore-draft',
       'clear-draft',
       'download-source',
+      'import-file-btn',
+      'import-file',
       'export-scale',
       'export-width',
       'export-width-custom',
