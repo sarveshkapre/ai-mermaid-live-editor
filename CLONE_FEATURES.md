@@ -48,6 +48,9 @@
 - [x] (2026-02-09) P1 AI: added OpenAI-compatible patch generation (provider settings, safe parsing, Mermaid extraction) plus one-click “Undo patch”.
   - Evidence: `index.html`, `src/main.js`, `src/lib/ai-patch.js`, `tests/ai-patch.test.js`, `make check`.
   - Commit: `5502d2c`
+- [x] (2026-02-09) P1 AI DX: added a local CORS-safe proxy for OpenAI APIs (API key via env, optional browser key).
+  - Evidence: `scripts/ai-proxy.mjs`, `README.md`, `eslint.config.js`, `docs/ROADMAP.md`.
+  - Commit: `4509885`
 
 ## Insights
 - Both failing GitHub runs were rooted in strict TS checks (`checkJs`) after state-heavy features landed in `src/main.js`.
@@ -67,11 +70,10 @@
 
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass (lint, typecheck, tests, build, audit)
-- `npm run test` -> pass (6 files, 16 tests)
-- `npm run build` -> pass (Mermaid split into `mermaid.core-*.js`, initial `index-*.js` ~37 kB)
-- GitHub Actions: `gh run watch 21811569637 --exit-status` -> success
-- Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`AI patch studio`, `Starter templates`, `download-export-history`) -> pass
-- Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`import-file-btn`, `import-file`, `shortcuts-dialog`) -> pass
+- `npm run test` -> pass (8 files, 23 tests)
+- GitHub Actions: `gh run watch 21817195219 --exit-status` -> success
+- GitHub Actions: `gh run watch 21817255094 --exit-status` -> success
+- Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`generate-patch`, `ai-api-base`, `undo-patch`) -> pass
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

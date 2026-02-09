@@ -69,6 +69,22 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Confidence: high
 - Trust label: local verification
 
+### 2026-02-09: Add OpenAI-Compatible Patch Generation + Undo
+- Decision: Add an optional OpenAI-compatible “Generate AI patch” flow with provider settings, safe response parsing, Mermaid extraction, and a one-click “Undo patch” restore after apply.
+- Why: “Simulate patch” is useful for demos, but real provider integration is required for product value; undo reduces risk of applying a bad patch.
+- Evidence: `src/main.js`, `src/lib/ai-patch.js`, `index.html`, `tests/ai-patch.test.js`; `make check` pass; CI run `21817195219` success.
+- Commit: `5502d2c`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Add Local AI Proxy Script For CORS + Key Hygiene
+- Decision: Add `scripts/ai-proxy.mjs` to forward `/v1/*` calls to an upstream OpenAI-compatible endpoint with permissive CORS, using `OPENAI_API_KEY` from the environment when present.
+- Why: Browser-to-provider calls often fail due to CORS and encourage insecure API key storage; a local proxy keeps keys out of the browser by default.
+- Evidence: `scripts/ai-proxy.mjs`, `README.md`, `eslint.config.js`; proxy-forwarding smoke check against a local stub upstream; CI run `21817255094` success.
+- Commit: `4509885`
+- Confidence: high
+- Trust label: local verification
+
 ## Mistakes And Fixes
 
 ### 2026-02-09: Missing JSDoc Type For New Helper Caused `tsc --noEmit` Failure
@@ -77,8 +93,52 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Fix: Added `/** @param {unknown} target */` in `src/main.js`.
 - Prevention rule: Run `make check` before every push (already policy); keep new helpers JSDoc-typed by default.
 
+### 2026-02-09: ESLint Scripts Glob Missed `.mjs` Files
+- Mistake: Added a Node script as `.mjs` but ESLint config only matched `scripts/**/*.js`, causing `no-undef` failures for Node globals.
+- Root cause: `eslint.config.js` file globs did not include `.mjs`.
+- Fix: Updated scripts config to `scripts/**/*.{js,mjs}`.
+- Prevention rule: When adding new executable scripts, ensure ESLint/TS configs include their extensions (prefer `.js` under `"type": "module"` unless `.mjs` is required).
+
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass
 - `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
 - `curl -fsSL http://127.0.0.1:4173/ | rg -n "AI patch studio|Starter templates|import-file-btn|download-export-history|shortcuts-dialog"` -> pass
 - `gh run watch 21811936755 --exit-status` -> success
+- `make check` -> pass (post AI patch generation + proxy)
+- `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
+- `curl -fsSL http://127.0.0.1:4173/ | rg -n "generate-patch|ai-api-base|ai-model|ai-api-mode|ai-api-key|ai-remember-key|undo-patch|patch-undo"` -> pass
+- `gh run watch 21817195219 --exit-status` -> success
+- `gh run watch 21817255094 --exit-status` -> success
+- Proxy-forwarding smoke (stub upstream + proxy + curl) -> pass
+  Command:
+  ```bash
+  node --input-type=module -e 'import http from "node:http";
+    const server = http.createServer((req,res)=>{
+      if (req.method==="POST" && req.url==="/v1/chat/completions") {
+        res.setHeader("Content-Type","application/json");
+        res.end(JSON.stringify({choices:[{message:{content:"flowchart TD\n  a-->b"}}]}));
+        return;
+      }
+      if (req.method==="POST" && req.url==="/v1/responses") {
+        res.setHeader("Content-Type","application/json");
+        res.end(JSON.stringify({output:[{type:"message",content:[{type:"output_text",text:"flowchart TD\n  a-->b"}]}]}));
+        return;
+      }
+      res.statusCode = 404; res.end("not found");
+    });
+    server.listen(9999,"127.0.0.1",()=>console.log("stub up"));
+    setInterval(()=>{},1000);' >/tmp/ai-mermaid-stub.log 2>&1 & echo $! > /tmp/ai-mermaid-stub.pid
+  PORT=8788 AI_PROXY_TARGET_ORIGIN=http://127.0.0.1:9999 node scripts/ai-proxy.mjs >/tmp/ai-mermaid-proxy.log 2>&1 & echo $! > /tmp/ai-mermaid-proxy.pid
+  sleep 0.8
+  curl -fsS -D /tmp/ai-mermaid-proxy.headers -o /tmp/ai-mermaid-proxy.body \
+    -H 'Content-Type: application/json' \
+    -d '{"model":"x","messages":[]}' \
+    http://127.0.0.1:8788/v1/chat/completions
+  rg -n "access-control-allow-origin: \\*" /tmp/ai-mermaid-proxy.headers
+  node --input-type=module -e 'import fs from "node:fs";
+    const body = JSON.parse(fs.readFileSync("/tmp/ai-mermaid-proxy.body","utf8"));
+    if (!body?.choices?.[0]?.message?.content) process.exit(2);
+    console.log("ok");'
+  kill $(cat /tmp/ai-mermaid-proxy.pid) $(cat /tmp/ai-mermaid-stub.pid)
+  rm -f /tmp/ai-mermaid-proxy.pid /tmp/ai-mermaid-stub.pid /tmp/ai-mermaid-proxy.headers /tmp/ai-mermaid-proxy.body
+  ```
