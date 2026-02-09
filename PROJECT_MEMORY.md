@@ -85,6 +85,31 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Confidence: high
 - Trust label: local verification
 
+### 2026-02-09: Import Mermaid From URL Into A New Tab
+- Decision: Add a non-destructive “Import from URL” flow that can fetch remote Mermaid text or decode this app’s share links into a new tab.
+- Why: Import-from-URL is baseline parity for editors and removes friction when diagrams live in repos, gists, or chat threads.
+- Evidence: `src/main.js`, `index.html`, `tests/dom-ids.test.js`; `make check` pass.
+- Commit: `9bd9917`
+- Confidence: medium
+- Trust label: local verification
+- Follow-ups: Consider a dedicated UI dialog (instead of `prompt`) and clearer CORS error help text.
+
+### 2026-02-09: Add AI Generation Controls + Cancel
+- Decision: Persist AI generation settings (temperature/max tokens/timeout) and support canceling in-flight patch generation.
+- Why: Users need control over determinism/cost/latency; cancel prevents “stuck” UI during slow provider responses.
+- Evidence: `src/main.js`, `index.html`, `src/styles.css`, `tests/dom-ids.test.js`; `make check` pass.
+- Commit: `8c1d12a`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Add Playwright Browser Smoke Script
+- Decision: Add an optional Playwright-driven UI smoke script that builds, previews, and exercises core flows (render, patch apply/undo, tabs).
+- Why: Unit tests can’t catch DOM wiring/regressions in real user flows; a smoke script provides fast end-to-end confidence.
+- Evidence: `scripts/smoke-browser.mjs`, `package.json`, `Makefile`; `make smoke` pass.
+- Commit: `af4e302`
+- Confidence: medium
+- Trust label: local verification
+
 ## Mistakes And Fixes
 
 ### 2026-02-09: Missing JSDoc Type For New Helper Caused `tsc --noEmit` Failure
@@ -98,6 +123,12 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Root cause: `eslint.config.js` file globs did not include `.mjs`.
 - Fix: Updated scripts config to `scripts/**/*.{js,mjs}`.
 - Prevention rule: When adding new executable scripts, ensure ESLint/TS configs include their extensions (prefer `.js` under `"type": "module"` unless `.mjs` is required).
+
+### 2026-02-09: Smoke Script Used Browser-Context Globals In Node File (ESLint `no-undef`)
+- Mistake: Initial Playwright smoke script used `document` inside `page.waitForFunction(() => ...)`, triggering `no-undef` in Node linting.
+- Root cause: ESLint correctly linted `scripts/*.mjs` as Node code; the callback is still defined in Node scope even if executed in the browser.
+- Fix: Switched to Playwright selectors, `page.textContent()`, `page.inputValue()`, and polling loops without referencing browser globals.
+- Prevention rule: Avoid `document/window` references in Node scripts; use selector-based Playwright APIs or string-evaluated functions if needed.
 
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass
@@ -142,3 +173,7 @@ Structured, append-only notes for decisions and learnings that should persist ac
   kill $(cat /tmp/ai-mermaid-proxy.pid) $(cat /tmp/ai-mermaid-stub.pid)
   rm -f /tmp/ai-mermaid-proxy.pid /tmp/ai-mermaid-stub.pid /tmp/ai-mermaid-proxy.headers /tmp/ai-mermaid-proxy.body
   ```
+
+## Verification Evidence (2026-02-09 cycle 3)
+- `make check` -> pass
+- `make smoke` -> pass

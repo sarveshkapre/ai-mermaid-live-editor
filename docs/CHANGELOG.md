@@ -21,3 +21,6 @@
 - Reliability: sanitize malformed tab localStorage payloads during startup
 - CI: fixed strict typecheck regressions in `src/main.js` and added helper unit tests
 - CI: workflow now uses `npm ci` with npm cache for deterministic installs
+- UX: import Mermaid from URL (remote file or share link) into a new tab
+- AI: generation controls (temperature/max tokens/timeout) + cancel
+- DX: optional Playwright browser smoke check (`make smoke`)

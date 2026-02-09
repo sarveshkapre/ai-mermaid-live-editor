@@ -7,17 +7,27 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P2: Add AI generation controls (temperature/max tokens) + cancel/timeout UI.
-- [ ] P2: Add browser-level smoke automation (Playwright) for render + patch apply + tab lifecycle.
-- [ ] P2: Add import from URL (hash/query param) with validation and optional “open as new tab”.
 - [ ] P3: Add PDF export (print-friendly output + consistent sizing).
 - [ ] P3: Add “format Mermaid” action (basic pretty-print) with a non-destructive preview.
 - [ ] P3: Add a lightweight presentation mode (full-screen with step-through snapshots).
+- [ ] P3: Add share-link UX for multi-tab workflows (explicit “open in new tab” option, preserve current tab).
+- [ ] P3: Add AI streaming output (progressively fill proposal) and surface token/cost metadata when available.
+- [ ] P3: Add diagram linting helpers (detect common Mermaid mistakes + quick fixes).
+- [ ] P3: Add a template gallery (save user templates + import/export).
 
 ## Implemented
 - [x] (2026-02-09) P0 repo contract: tracked the root `AGENTS.md` operating contract and refreshed the prioritized feature backlog.
   - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`.
   - Commit: `023de7b`
+- [x] (2026-02-09) P2 import: added import-from-URL into a new diagram tab (supports remote `.mmd` fetch or app share links; size limits + Mermaid parse warning).
+  - Evidence: `src/main.js`, `index.html`, `tests/dom-ids.test.js`, `make check`.
+  - Commit: `9bd9917`
+- [x] (2026-02-09) P2 AI: added generation controls (temperature/max tokens/timeout) + cancel for AI patch generation.
+  - Evidence: `src/main.js`, `index.html`, `src/styles.css`, `tests/dom-ids.test.js`, `make check`.
+  - Commit: `8c1d12a`
+- [x] (2026-02-09) P2 QA: added Playwright-based browser smoke automation for render + patch apply + tab lifecycle.
+  - Evidence: `scripts/smoke-browser.mjs`, `package.json`, `Makefile`, `README.md`, `make smoke`.
+  - Commit: `af4e302`
 - [x] (2026-02-09) P1 security: hardened Mermaid initialization with explicit `securityLevel: "strict"` and locked secure keys to prevent directive overrides.
   - Evidence: `src/lib/mermaid-loader.js`, `tests/mermaid-loader.test.js`, `make check`.
   - Commit: `c6dcede`
@@ -61,16 +71,21 @@
 - Defaulting Mermaid to strict security mode reduces risk from pasted/share-linked diagrams; locking secure keys prevents inline init directives from weakening defaults.
 - Preview UX parity: space-drag pan helps navigate large diagrams without fighting scrollbars; zoom now persists via localStorage.
 - File import is safest when it creates a new tab (non-destructive) and enforces a size limit to avoid hangs.
+- Import-from-URL is useful parity: it reduces friction to move diagrams between tools, repos, and chat threads.
+- A dedicated browser smoke script catches DOM-wiring regressions that unit tests miss (render/pan/patch/tab flows).
 
 ## Market Scan Notes (2026-02-09)
 - Baseline expectations for Mermaid editors in the wild include: URL sharing, export to PNG/SVG (often PDF too), themes, autosave/recovery, and (in some products) collaboration/comments/presentations. Sources:
-  - Mermaid Chart highlights collaboration, comments, and presentation mode as product features. See Mermaid’s ecosystem page. (source: `https://mermaid.js.org/ecosystem/mermaid-chart.html`)
-  - Some Mermaid editor products market annotations/highlights and multi-format export + URL share as “power features”. (example: `https://modern-mermaid.live/features.html`, `https://modern-mermaid.live/docs/`)
+  - Mermaid Chart launched with shareable diagram links and a presentation mode feature, reinforcing “share + present” as a common expectation. (source: `https://docs.mermaidchart.com/blog/posts/mermaid-chart-officially-launched-with-sharable-diagram-links-and-presentation-mode`)
+  - Online Mermaid Viewer markets “export SVG/PNG” and “share via URL”, plus pan + fullscreen controls as parity UX. (source: `https://mermaid-viewer.com/en`)
+  - Modern Mermaid markets annotation tools plus flexible export + URL sharing, suggesting differentiation is trending toward markup/annotation layers beyond vanilla Mermaid. (source: `https://modern-mermaid.live/features.html`)
+  - MarkChart (native app) lists PDF/PNG/SVG export, syntax highlighting, and templates, reinforcing multi-format export parity. (source: `https://apps.apple.com/us/app/markchart-mermaid-preview/id6475648822`)
 - Mermaid security configuration supports `securityLevel` and “secure config keys” to prevent diagram directives from overriding site defaults; this matters for share links and pasted content. (source: `https://mermaid.js.org/config/schema-docs/config`, `https://mermaid.js.org/config/setup/mermaid/interfaces/MermaidConfig.html`)
 
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass (lint, typecheck, tests, build, audit)
 - `npm run test` -> pass (8 files, 23 tests)
+- `make smoke` -> pass (Playwright UI flow)
 - GitHub Actions: `gh run watch 21817195219 --exit-status` -> success
 - GitHub Actions: `gh run watch 21817255094 --exit-status` -> success
 - Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`generate-patch`, `ai-api-base`, `undo-patch`) -> pass
