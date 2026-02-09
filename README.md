@@ -11,6 +11,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Live Mermaid rendering with error surfacing
 - Patch preview with line diff
 - Commit history with restore
+- Auto restore point saved before patch apply
 - Shareable links (URL hash)
 - SVG/PNG export
 - Draft autosave with restore/clear
@@ -24,6 +25,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Copy PNG action
 - Export summary with estimated output sizes
 - Export presets per diagram + recent export history
+- Export history JSON download
 - Dark mode and keyboard shortcuts
 - Patch validation before apply (line-aware Mermaid errors)
 - Tab persistence recovery for malformed local state
