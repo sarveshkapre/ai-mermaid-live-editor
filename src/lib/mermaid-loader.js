@@ -21,9 +21,12 @@ export async function loadMermaid(theme) {
     mermaid.initialize({
       startOnLoad: false,
       theme,
+      // Ensure pasted/share-linked diagrams cannot opt into unsafe HTML/script behaviors.
+      securityLevel: 'strict',
+      // Prevent `%%{init: ...}%%` directives from overriding site-level security defaults.
+      secure: ['securityLevel', 'startOnLoad'],
     });
     lastTheme = theme;
   }
   return mermaid;
 }
-
