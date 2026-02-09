@@ -7,11 +7,16 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P1: Integrate a real OpenAI-compatible patch generation flow (model + endpoint settings, safe request/response parsing).
+- [ ] P0: Reduce initial JS bundle size by lazy-loading Mermaid and splitting build chunks (faster first paint).
 - [ ] P1: Add export-history JSON download for recent exports (separate from commit timeline export).
-- [ ] P2: Add patch rollback hint UX (quick restore point immediately after apply).
-- [ ] P2: Reduce initial JS bundle size (lazy-load Mermaid diagram modules and set manual chunks).
-- [ ] P2: Add browser-level smoke automation (Playwright) for patch validation and tab lifecycle.
+- [ ] P1: Add “pre-patch restore point” UX (automatic snapshot before apply + one-click restore hint).
+- [ ] P1: Integrate a real OpenAI-compatible patch generation flow (provider settings, safe request/response parsing, strict output format).
+- [ ] P2: Improve diff performance for medium/large diagrams (prefix/suffix trimming, memory caps) while keeping guardrails.
+- [ ] P2: Add drag-to-pan preview plus zoom persistence for large diagrams (parity with common editors).
+- [ ] P2: Add browser-level smoke automation (Playwright) for render + patch apply + tab lifecycle.
+- [ ] P3: Add PDF export (print-friendly output + consistent sizing).
+- [ ] P3: Add import from file (load `.mmd`/`.md`) and from URL (hash or query param) with validation.
+- [ ] P3: Add “format Mermaid” action (basic pretty-print) with a non-destructive preview.
 
 ## Implemented
 - [x] (2026-02-08) P0 CI unblock: fixed strict JS typecheck failures in `src/main.js` by adding explicit JSDoc typing and safe payload normalization.
