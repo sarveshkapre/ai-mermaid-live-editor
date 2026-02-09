@@ -42,6 +42,12 @@ make dev
 ```
 Open `http://localhost:5173`.
 
+## Browser Smoke Check (Optional)
+```bash
+make smoke
+```
+If you have not installed browsers yet, run `npx playwright install chromium` once.
+
 ## AI Patch Generation (Optional)
 This app can generate patch proposals using an OpenAI-compatible API. For security and CORS, the recommended setup is to run a local proxy and keep the API key in your shell environment (not in the browser).
 

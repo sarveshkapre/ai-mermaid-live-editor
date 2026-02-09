@@ -21,4 +21,7 @@ security:
 
 check: lint typecheck test build security
 
+smoke: build
+	npm run smoke:browser
+
 release: build

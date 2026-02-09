@@ -1,9 +1,9 @@
 # ROADMAP
 
 ## Near-term
-- Browser smoke automation (Playwright)
 
 ## Shipped
+- Browser smoke automation (Playwright) (2026-02-09)
 - Import from URL into a new tab (validated) (2026-02-09)
 - AI generation controls (temperature/max tokens/timeout) + cancel (2026-02-09)
 - Export history as JSON (2026-02-09)
