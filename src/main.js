@@ -1,9 +1,9 @@
-import mermaid from 'mermaid';
 import { diffLines } from './lib/diff.js';
 import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
 import { errorToMessage, extractMermaidErrorLine } from './lib/mermaid-error.js';
+import { loadMermaid } from './lib/mermaid-loader.js';
 import { normalizeTabsState } from './lib/tabs.js';
 
 const DEFAULT_DIAGRAM = `flowchart TD
@@ -377,6 +377,8 @@ let activeTabId = null;
 let tabs = [];
 /** @type {number | null} */
 let lastErrorLine = null;
+/** @type {number} */
+let renderSeq = 0;
 let isReadOnly = false;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
@@ -388,11 +390,6 @@ const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
 const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
 const DIFF_LIMITS = { maxChars: 15000, maxLines: 800 };
 const RENDER_LIMITS = { maxChars: 20000, maxLines: 1000 };
-
-mermaid.initialize({
-  startOnLoad: false,
-  theme: document.body.classList.contains('theme-dark') ? 'dark' : 'neutral'
-});
 
 /**
  * @param {string} message
@@ -915,6 +912,7 @@ function renderTemplates() {
  * @param {boolean=} force
  */
 async function renderMermaid(force = false) {
+  const seq = (renderSeq += 1);
   const code = editor.value.trim();
   if (!code) {
     lastSvg = '';
@@ -933,14 +931,17 @@ async function renderMermaid(force = false) {
     return;
   }
   try {
+    const mermaid = await loadMermaid(document.body.classList.contains('theme-dark') ? 'dark' : 'neutral');
     renderStatus.textContent = force && isTooLargeForRender(code) ? 'Rendering large diagram…' : 'Rendering…';
     const { svg } = await mermaid.render(`diagram-${Date.now()}`, code);
+    if (seq !== renderSeq) return;
     lastSvg = svg;
     previewContent.innerHTML = svg;
     renderStatus.textContent = 'Rendered';
     updateExportSummary();
     setErrorLine(null);
   } catch (error) {
+    if (seq !== renderSeq) return;
     lastSvg = '';
     previewContent.innerHTML = '';
     const message = errorToMessage(error);
@@ -1031,6 +1032,7 @@ function updateDiff() {
  */
 async function validatePatchProposal(code) {
   try {
+    const mermaid = await loadMermaid(document.body.classList.contains('theme-dark') ? 'dark' : 'neutral');
     await mermaid.parse(code);
     return { ok: true };
   } catch (error) {
@@ -1112,10 +1114,7 @@ function applyTheme(isDark, options = {}) {
   document.body.classList.toggle('theme-dark', isDark);
   themeToggle.setAttribute('aria-pressed', String(isDark));
   themeToggle.textContent = isDark ? 'Light mode' : 'Dark mode';
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: isDark ? 'dark' : 'neutral'
-  });
+  void loadMermaid(isDark ? 'dark' : 'neutral');
   if (options.render !== false) {
     renderMermaid();
   }
