@@ -1,6 +1,10 @@
 # ROADMAP
 
 ## Near-term
+- PDF export (print-friendly sizing)
+- Format Mermaid (non-destructive preview)
+- Lightweight presentation mode (full-screen + step-through snapshots)
+- Share-link UX for multi-tab workflows (explicit “open in new tab” option)
 
 ## Shipped
 - Browser smoke automation (Playwright) (2026-02-09)
