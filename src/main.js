@@ -2,6 +2,7 @@ import { diffLines } from './lib/diff.js';
 import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
+import { buildPatchMessages, extractMermaidFromText, extractTextFromProviderResponse } from './lib/ai-patch.js';
 import { errorToMessage, extractMermaidErrorLine } from './lib/mermaid-error.js';
 import { loadMermaid } from './lib/mermaid-loader.js';
 import { normalizeTabsState } from './lib/tabs.js';
@@ -248,6 +249,24 @@ const stats = byId('stats');
 const instructions = byId('instructions');
 /** @type {HTMLTextAreaElement} */
 const proposal = byId('proposal');
+/** @type {HTMLButtonElement} */
+const generatePatchBtn = byId('generate-patch');
+/** @type {HTMLInputElement} */
+const aiApiBaseInput = byId('ai-api-base');
+/** @type {HTMLInputElement} */
+const aiModelInput = byId('ai-model');
+/** @type {HTMLSelectElement} */
+const aiApiModeSelect = byId('ai-api-mode');
+/** @type {HTMLInputElement} */
+const aiApiKeyInput = byId('ai-api-key');
+/** @type {HTMLInputElement} */
+const aiRememberKeyToggle = byId('ai-remember-key');
+/** @type {HTMLDivElement} */
+const aiStatus = byId('ai-status');
+/** @type {HTMLDivElement} */
+const patchUndoRow = byId('patch-undo');
+/** @type {HTMLButtonElement} */
+const undoPatchBtn = byId('undo-patch');
 /** @type {HTMLDivElement} */
 const diffEl = byId('diff');
 /** @type {HTMLDivElement} */
@@ -390,6 +409,8 @@ let lastErrorLine = null;
 /** @type {number} */
 let renderSeq = 0;
 let isReadOnly = false;
+/** @type {string | null} */
+let lastPatchRestoreId = null;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
@@ -399,6 +420,9 @@ const PREVIEW_SCALE_KEY = 'ai-mermaid-preview-scale';
 const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
 const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
 const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
+const AI_SETTINGS_KEY = 'ai-mermaid-ai-settings';
+const AI_KEY_SESSION = 'ai-mermaid-ai-key-session';
+const AI_KEY_PERSIST = 'ai-mermaid-ai-key-persist';
 const DIFF_LIMITS = { maxChars: 15000, maxLines: 800 };
 const RENDER_LIMITS = { maxChars: 20000, maxLines: 1000 };
 const IMPORT_LIMITS = { maxBytes: 250_000 };
@@ -518,6 +542,115 @@ function getProjectPayload() {
     purpose: projectPurposeInput.value.trim(),
     useFilenames: useFilenamesToggle.checked,
   };
+}
+
+/**
+ * @typedef {{apiBase: string, model: string, mode: 'chat' | 'responses', rememberKey: boolean}} AiSettings
+ */
+
+/**
+ * @returns {AiSettings}
+ */
+function loadAiSettings() {
+  /** @type {AiSettings} */
+  const defaults = { apiBase: '', model: '', mode: 'chat', rememberKey: false };
+  const raw = localStorage.getItem(AI_SETTINGS_KEY);
+  if (!raw) return defaults;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return defaults;
+    const data = /** @type {Record<string, unknown>} */ (parsed);
+    const apiBase = typeof data.apiBase === 'string' ? data.apiBase : defaults.apiBase;
+    const model = typeof data.model === 'string' ? data.model : defaults.model;
+    const mode = data.mode === 'responses' ? 'responses' : 'chat';
+    const rememberKey = typeof data.rememberKey === 'boolean' ? data.rememberKey : defaults.rememberKey;
+    return { apiBase, model, mode, rememberKey };
+  } catch {
+    return defaults;
+  }
+}
+
+/**
+ * @param {AiSettings} settings
+ */
+function saveAiSettings(settings) {
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+/**
+ * @param {boolean} remember
+ */
+function loadAiKey(remember) {
+  const key = remember ? AI_KEY_PERSIST : AI_KEY_SESSION;
+  const storage = remember ? localStorage : sessionStorage;
+  try {
+    return storage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * @param {string} apiKey
+ * @param {boolean} remember
+ */
+function saveAiKey(apiKey, remember) {
+  const trimmed = apiKey.trim();
+  try {
+    if (remember) {
+      localStorage.setItem(AI_KEY_PERSIST, trimmed);
+      sessionStorage.removeItem(AI_KEY_SESSION);
+    } else {
+      sessionStorage.setItem(AI_KEY_SESSION, trimmed);
+      localStorage.removeItem(AI_KEY_PERSIST);
+    }
+  } catch {
+    // Ignore storage failures (e.g. disabled localStorage).
+  }
+}
+
+/**
+ * @param {string} message
+ */
+function setAiStatus(message) {
+  aiStatus.textContent = message;
+}
+
+/**
+ * @param {string} apiBase
+ */
+function normalizeApiBase(apiBase) {
+  return apiBase.trim().replace(/\/+$/, '');
+}
+
+/**
+ * @returns {AiSettings}
+ */
+function getAiSettingsFromForm() {
+  const mode = aiApiModeSelect.value === 'responses' ? 'responses' : 'chat';
+  return {
+    apiBase: aiApiBaseInput.value.trim(),
+    model: aiModelInput.value.trim(),
+    mode,
+    rememberKey: aiRememberKeyToggle.checked,
+  };
+}
+
+/**
+ * @param {AiSettings} settings
+ */
+function applyAiSettingsToForm(settings) {
+  aiApiBaseInput.value = settings.apiBase || '';
+  aiModelInput.value = settings.model || 'gpt-4.1';
+  aiApiModeSelect.value = settings.mode || 'chat';
+  aiRememberKeyToggle.checked = Boolean(settings.rememberKey);
+  aiApiKeyInput.value = loadAiKey(aiRememberKeyToggle.checked);
+}
+
+function persistAiSettingsFromForm() {
+  const settings = getAiSettingsFromForm();
+  saveAiSettings(settings);
+  saveAiKey(aiApiKeyInput.value, settings.rememberKey);
 }
 
 /**
@@ -880,6 +1013,7 @@ function applyReadOnlyMode() {
   proposal.readOnly = isReadOnly;
   const buttons = [
     commitBtn,
+    generatePatchBtn,
     simulateBtn,
     applyPatchBtn,
     exportSvgBtn,
@@ -898,6 +1032,7 @@ function applyReadOnlyMode() {
     duplicateTabBtn,
     renameTabBtn,
     deleteTabBtn,
+    undoPatchBtn,
   ];
   buttons.forEach((btn) => {
     btn.disabled = isReadOnly;
@@ -907,6 +1042,14 @@ function applyReadOnlyMode() {
   projectOwnerInput.disabled = isReadOnly;
   projectPurposeInput.disabled = isReadOnly;
   useFilenamesToggle.disabled = isReadOnly;
+  aiApiBaseInput.disabled = isReadOnly;
+  aiModelInput.disabled = isReadOnly;
+  aiApiModeSelect.disabled = isReadOnly;
+  aiApiKeyInput.disabled = isReadOnly;
+  aiRememberKeyToggle.disabled = isReadOnly;
+  if (isReadOnly) {
+    patchUndoRow.hidden = true;
+  }
 }
 
 function renderPromptRecipes() {
@@ -1092,6 +1235,101 @@ function scheduleRender() {
   }, delay);
 }
 
+async function generatePatch() {
+  if (isReadOnly) return;
+  const settings = getAiSettingsFromForm();
+  const apiBase = normalizeApiBase(settings.apiBase);
+  const mode = settings.mode;
+  const model = settings.model || 'gpt-4.1';
+  const apiKey = aiApiKeyInput.value.trim();
+
+  saveAiSettings({ ...settings, apiBase, model });
+  saveAiKey(apiKey, settings.rememberKey);
+
+  if (!apiBase) {
+    showToast('Set an AI API base URL first.');
+    return;
+  }
+
+  generatePatchBtn.disabled = true;
+  setAiStatus('Generating patch…');
+
+  const { system, user } = buildPatchMessages({
+    tabTitle: getActiveTab()?.title || 'Diagram',
+    project: getProjectPayload(),
+    diagram: editor.value,
+    instructions: instructions.value,
+  });
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 45_000);
+
+  try {
+    const url =
+      mode === 'responses' ? `${apiBase}/responses` : `${apiBase}/chat/completions`;
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    };
+    const body =
+      mode === 'responses'
+        ? {
+            model,
+            instructions: system,
+            input: user,
+            text: { format: { type: 'text' } },
+            store: false,
+          }
+        : {
+            model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: user },
+            ],
+          };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      const message =
+        json && typeof json === 'object'
+          ? /** @type {any} */ (json)?.error?.message || `HTTP ${res.status}`
+          : `HTTP ${res.status}`;
+      throw new Error(String(message));
+    }
+
+    const text = extractTextFromProviderResponse(json, mode);
+    if (!text) {
+      throw new Error('Provider response did not include text output.');
+    }
+
+    const mermaid = extractMermaidFromText(text);
+    if (mermaid) {
+      proposal.value = mermaid;
+      setAiStatus('Patch generated.');
+    } else {
+      proposal.value = text.trim();
+      setAiStatus('AI output was not recognized as Mermaid. Raw output pasted into proposal.');
+    }
+
+    updateDiff();
+    showToast('AI patch ready.');
+  } catch (error) {
+    const message = errorToMessage(error);
+    setAiStatus(`Patch generation failed: ${message}`);
+    showToast('AI patch failed.');
+  } finally {
+    window.clearTimeout(timeout);
+    generatePatchBtn.disabled = false;
+  }
+}
+
 function simulatePatch() {
   if (isReadOnly) return;
   const base = editor.value.trim();
@@ -1169,11 +1407,31 @@ async function applyPatch() {
     return;
   }
   // Create a restore point so "Apply patch" is never irreversible.
-  addSnapshot(editor.value, 'Auto: before patch');
+  const items = addSnapshot(editor.value, 'Auto: before patch');
+  lastPatchRestoreId = items[0]?.id || null;
+  patchUndoRow.hidden = !lastPatchRestoreId;
   renderTimeline();
   editor.value = next;
   scheduleRender();
   showToast('Patch applied. Restore point saved in timeline.');
+}
+
+function undoLastPatch() {
+  if (isReadOnly) return;
+  if (!lastPatchRestoreId) return;
+  const items = loadHistory();
+  const item = items.find((entry) => entry.id === lastPatchRestoreId) || null;
+  if (!item) {
+    patchUndoRow.hidden = true;
+    lastPatchRestoreId = null;
+    showToast('Undo unavailable (snapshot missing).');
+    return;
+  }
+  editor.value = item.diagram;
+  scheduleRender();
+  patchUndoRow.hidden = true;
+  lastPatchRestoreId = null;
+  showToast('Patch undone.');
 }
 
 function renderTimeline() {
@@ -1866,6 +2124,8 @@ function init() {
   if (storedProject) {
     applyProjectPayload(storedProject);
   }
+  applyAiSettingsToForm(loadAiSettings());
+  setAiStatus('');
 
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash.replace('#', '');
@@ -1961,10 +2221,14 @@ projectPurposeInput.addEventListener('input', persistProject);
 useFilenamesToggle.addEventListener('change', persistProject);
 
 commitBtn.addEventListener('click', commitSnapshot);
+generatePatchBtn.addEventListener('click', () => {
+  void generatePatch();
+});
 simulateBtn.addEventListener('click', simulatePatch);
 applyPatchBtn.addEventListener('click', () => {
   void applyPatch();
 });
+undoPatchBtn.addEventListener('click', undoLastPatch);
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
 copySourceBtn.addEventListener('click', copySource);
@@ -1978,6 +2242,12 @@ zoomResetBtn.addEventListener('click', () => setPreviewScale(1));
 jumpErrorBtn.addEventListener('click', jumpToError);
 copySnapshotBtn.addEventListener('click', copySnapshotLink);
 downloadBundleBtn.addEventListener('click', downloadBundle);
+
+aiApiBaseInput.addEventListener('input', persistAiSettingsFromForm);
+aiModelInput.addEventListener('input', persistAiSettingsFromForm);
+aiApiModeSelect.addEventListener('change', persistAiSettingsFromForm);
+aiApiKeyInput.addEventListener('input', persistAiSettingsFromForm);
+aiRememberKeyToggle.addEventListener('change', persistAiSettingsFromForm);
 
 window.addEventListener('keydown', (event) => {
   if (event.code !== 'Space') return;

@@ -133,13 +133,51 @@
             <h2>AI patch studio</h2>
             <div class="hint">Paste or generate patch proposals, then apply with preview.</div>
           </div>
+          <details class="provider-settings">
+            <summary>AI provider settings</summary>
+            <div class="provider-grid">
+              <label class="field">
+                <span>API base URL</span>
+                <input id="ai-api-base" type="text" placeholder="http://127.0.0.1:8787/v1 or https://api.openai.com/v1" />
+              </label>
+              <label class="field">
+                <span>Model</span>
+                <input id="ai-model" type="text" placeholder="e.g. gpt-4.1" />
+              </label>
+              <label class="field">
+                <span>API mode</span>
+                <select id="ai-api-mode">
+                  <option value="chat">Chat Completions</option>
+                  <option value="responses">Responses</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>API key</span>
+                <input id="ai-api-key" type="password" placeholder="Optional when using local proxy" />
+              </label>
+              <label class="field checkbox">
+                <input id="ai-remember-key" type="checkbox" />
+                <span>Remember API key on this device (not recommended)</span>
+              </label>
+              <div class="hint">
+                Tip: run <code>OPENAI_API_KEY=… node scripts/ai-proxy.mjs</code> and set base URL to
+                <code>http://127.0.0.1:8787/v1</code>.
+              </div>
+            </div>
+          </details>
           <div class="label">Prompt recipes</div>
           <div id="prompt-recipes" class="prompt-recipes"></div>
           <label class="label" for="instructions">Instructions</label>
           <textarea id="instructions" placeholder="Refactor the flow into swimlanes with explicit approvals."></textarea>
           <div class="toolbar">
-            <button id="simulate" type="button">Simulate AI patch</button>
+            <button id="generate-patch" type="button">Generate AI patch</button>
+            <button id="simulate" class="ghost" type="button">Simulate patch</button>
             <button id="apply-patch" class="ghost" type="button">Apply patch</button>
+          </div>
+          <div id="ai-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div id="patch-undo" class="undo-row" hidden>
+            <span>Patch applied.</span>
+            <button id="undo-patch" class="ghost" type="button">Undo</button>
           </div>
           <label class="label" for="proposal">Patch proposal</label>
           <textarea id="proposal" placeholder="AI patch output will appear here."></textarea>

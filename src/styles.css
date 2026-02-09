@@ -93,7 +93,8 @@ h1 {
 }
 
 input[type="text"],
-input[type="search"] {
+input[type="search"],
+input[type="password"] {
   border-radius: 999px;
   border: 1px solid var(--border);
   padding: 8px 12px;
@@ -358,6 +359,17 @@ select {
   flex: 1;
 }
 
+.field input[type="password"] {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  background: var(--bg-alt);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  flex: 1;
+}
+
 .field {
   display: flex;
   align-items: center;
@@ -388,6 +400,46 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.provider-settings {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  padding: 10px 12px;
+}
+
+.provider-settings summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.provider-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.provider-grid code {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.undo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--accent-2) 12%, var(--bg-alt));
+  color: var(--text);
+}
+
+.undo-row button {
+  padding: 6px 14px;
+  font-size: 12px;
 }
 
 .tabs {
@@ -577,6 +629,7 @@ body.focus-mode .preview {
 
 body.read-only .tab-actions button,
 body.read-only #apply-patch,
+body.read-only #generate-patch,
 body.read-only #simulate,
 body.read-only #commit,
 body.read-only #clear-history,
@@ -585,7 +638,9 @@ body.read-only #save-preset,
 body.read-only #delete-preset,
 body.read-only #download-history,
 body.read-only #clear-draft,
-body.read-only #restore-draft {
+body.read-only #restore-draft,
+body.read-only #undo-patch,
+body.read-only .provider-settings {
   display: none;
 }
 
