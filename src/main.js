@@ -258,11 +258,19 @@ const aiModelInput = byId('ai-model');
 /** @type {HTMLSelectElement} */
 const aiApiModeSelect = byId('ai-api-mode');
 /** @type {HTMLInputElement} */
+const aiTemperatureInput = byId('ai-temperature');
+/** @type {HTMLInputElement} */
+const aiMaxTokensInput = byId('ai-max-tokens');
+/** @type {HTMLInputElement} */
+const aiTimeoutInput = byId('ai-timeout');
+/** @type {HTMLInputElement} */
 const aiApiKeyInput = byId('ai-api-key');
 /** @type {HTMLInputElement} */
 const aiRememberKeyToggle = byId('ai-remember-key');
 /** @type {HTMLDivElement} */
 const aiStatus = byId('ai-status');
+/** @type {HTMLButtonElement} */
+const cancelGeneratePatchBtn = byId('cancel-generate-patch');
 /** @type {HTMLDivElement} */
 const patchUndoRow = byId('patch-undo');
 /** @type {HTMLButtonElement} */
@@ -413,6 +421,10 @@ let renderSeq = 0;
 let isReadOnly = false;
 /** @type {string | null} */
 let lastPatchRestoreId = null;
+/** @type {AbortController | null} */
+let aiRequestController = null;
+/** @type {number | null} */
+let aiRequestTimeout = null;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
@@ -547,7 +559,7 @@ function getProjectPayload() {
 }
 
 /**
- * @typedef {{apiBase: string, model: string, mode: 'chat' | 'responses', rememberKey: boolean}} AiSettings
+ * @typedef {{apiBase: string, model: string, mode: 'chat' | 'responses', rememberKey: boolean, temperature: number | null, maxTokens: number | null, timeoutSec: number}} AiSettings
  */
 
 /**
@@ -555,7 +567,15 @@ function getProjectPayload() {
  */
 function loadAiSettings() {
   /** @type {AiSettings} */
-  const defaults = { apiBase: '', model: '', mode: 'chat', rememberKey: false };
+  const defaults = {
+    apiBase: '',
+    model: '',
+    mode: 'chat',
+    rememberKey: false,
+    temperature: null,
+    maxTokens: null,
+    timeoutSec: 45,
+  };
   const raw = localStorage.getItem(AI_SETTINGS_KEY);
   if (!raw) return defaults;
   try {
@@ -566,7 +586,16 @@ function loadAiSettings() {
     const model = typeof data.model === 'string' ? data.model : defaults.model;
     const mode = data.mode === 'responses' ? 'responses' : 'chat';
     const rememberKey = typeof data.rememberKey === 'boolean' ? data.rememberKey : defaults.rememberKey;
-    return { apiBase, model, mode, rememberKey };
+    const temperatureInput =
+      typeof data.temperature === 'number' && Number.isFinite(data.temperature) ? data.temperature : null;
+    const temperature =
+      temperatureInput === null ? null : Math.min(2, Math.max(0, temperatureInput));
+    const maxTokensInput = typeof data.maxTokens === 'number' && Number.isFinite(data.maxTokens) ? data.maxTokens : null;
+    const maxTokens = maxTokensInput && maxTokensInput > 0 ? Math.floor(maxTokensInput) : null;
+    const timeoutInput =
+      typeof data.timeoutSec === 'number' && Number.isFinite(data.timeoutSec) ? data.timeoutSec : defaults.timeoutSec;
+    const timeoutSec = Math.min(180, Math.max(5, Math.floor(timeoutInput)));
+    return { apiBase, model, mode, rememberKey, temperature, maxTokens, timeoutSec };
   } catch {
     return defaults;
   }
@@ -630,11 +659,25 @@ function normalizeApiBase(apiBase) {
  */
 function getAiSettingsFromForm() {
   const mode = aiApiModeSelect.value === 'responses' ? 'responses' : 'chat';
+  const temperatureRaw = aiTemperatureInput.value.trim();
+  const temperatureValue = temperatureRaw ? Number(temperatureRaw) : null;
+  const temperature =
+    temperatureValue !== null && Number.isFinite(temperatureValue) ? Math.min(2, Math.max(0, temperatureValue)) : null;
+  const maxTokensRaw = aiMaxTokensInput.value.trim();
+  const maxTokensValue = maxTokensRaw ? Number(maxTokensRaw) : null;
+  const maxTokens =
+    maxTokensValue !== null && Number.isFinite(maxTokensValue) && maxTokensValue > 0 ? Math.floor(maxTokensValue) : null;
+  const timeoutRaw = aiTimeoutInput.value.trim();
+  const timeoutValue = timeoutRaw ? Number(timeoutRaw) : 45;
+  const timeoutSec = Number.isFinite(timeoutValue) ? Math.min(180, Math.max(5, Math.floor(timeoutValue))) : 45;
   return {
     apiBase: aiApiBaseInput.value.trim(),
     model: aiModelInput.value.trim(),
     mode,
     rememberKey: aiRememberKeyToggle.checked,
+    temperature,
+    maxTokens,
+    timeoutSec,
   };
 }
 
@@ -645,6 +688,9 @@ function applyAiSettingsToForm(settings) {
   aiApiBaseInput.value = settings.apiBase || '';
   aiModelInput.value = settings.model || 'gpt-4.1';
   aiApiModeSelect.value = settings.mode || 'chat';
+  aiTemperatureInput.value = typeof settings.temperature === 'number' ? String(settings.temperature) : '';
+  aiMaxTokensInput.value = typeof settings.maxTokens === 'number' ? String(settings.maxTokens) : '';
+  aiTimeoutInput.value = String(settings.timeoutSec || 45);
   aiRememberKeyToggle.checked = Boolean(settings.rememberKey);
   aiApiKeyInput.value = loadAiKey(aiRememberKeyToggle.checked);
 }
@@ -1139,6 +1185,7 @@ function applyReadOnlyMode() {
   const buttons = [
     commitBtn,
     generatePatchBtn,
+    cancelGeneratePatchBtn,
     simulateBtn,
     applyPatchBtn,
     exportSvgBtn,
@@ -1171,6 +1218,9 @@ function applyReadOnlyMode() {
   aiApiBaseInput.disabled = isReadOnly;
   aiModelInput.disabled = isReadOnly;
   aiApiModeSelect.disabled = isReadOnly;
+  aiTemperatureInput.disabled = isReadOnly;
+  aiMaxTokensInput.disabled = isReadOnly;
+  aiTimeoutInput.disabled = isReadOnly;
   aiApiKeyInput.disabled = isReadOnly;
   aiRememberKeyToggle.disabled = isReadOnly;
   if (isReadOnly) {
@@ -1363,6 +1413,10 @@ function scheduleRender() {
 
 async function generatePatch() {
   if (isReadOnly) return;
+  if (aiRequestController) {
+    showToast('Patch generation already in progress.');
+    return;
+  }
   const settings = getAiSettingsFromForm();
   const apiBase = normalizeApiBase(settings.apiBase);
   const mode = settings.mode;
@@ -1378,6 +1432,7 @@ async function generatePatch() {
   }
 
   generatePatchBtn.disabled = true;
+  cancelGeneratePatchBtn.disabled = false;
   setAiStatus('Generating patch…');
 
   const { system, user } = buildPatchMessages({
@@ -1388,7 +1443,8 @@ async function generatePatch() {
   });
 
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 45_000);
+  aiRequestController = controller;
+  aiRequestTimeout = window.setTimeout(() => controller.abort(), Math.max(5, settings.timeoutSec || 45) * 1000);
 
   try {
     const url =
@@ -1397,6 +1453,10 @@ async function generatePatch() {
       'Content-Type': 'application/json',
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
     };
+    const maybeTemperature =
+      typeof settings.temperature === 'number' && Number.isFinite(settings.temperature)
+        ? { temperature: settings.temperature }
+        : {};
     const body =
       mode === 'responses'
         ? {
@@ -1405,6 +1465,10 @@ async function generatePatch() {
             input: user,
             text: { format: { type: 'text' } },
             store: false,
+            ...(typeof settings.maxTokens === 'number' && Number.isFinite(settings.maxTokens) && settings.maxTokens > 0
+              ? { max_output_tokens: Math.floor(settings.maxTokens) }
+              : {}),
+            ...maybeTemperature,
           }
         : {
             model,
@@ -1412,6 +1476,10 @@ async function generatePatch() {
               { role: 'system', content: system },
               { role: 'user', content: user },
             ],
+            ...(typeof settings.maxTokens === 'number' && Number.isFinite(settings.maxTokens) && settings.maxTokens > 0
+              ? { max_tokens: Math.floor(settings.maxTokens) }
+              : {}),
+            ...maybeTemperature,
           };
 
     const res = await fetch(url, {
@@ -1447,12 +1515,22 @@ async function generatePatch() {
     updateDiff();
     showToast('AI patch ready.');
   } catch (error) {
-    const message = errorToMessage(error);
-    setAiStatus(`Patch generation failed: ${message}`);
-    showToast('AI patch failed.');
+    if (controller.signal.aborted) {
+      setAiStatus('Patch generation cancelled.');
+      showToast('AI patch cancelled.');
+    } else {
+      const message = errorToMessage(error);
+      setAiStatus(`Patch generation failed: ${message}`);
+      showToast('AI patch failed.');
+    }
   } finally {
-    window.clearTimeout(timeout);
-    generatePatchBtn.disabled = false;
+    if (aiRequestTimeout) {
+      window.clearTimeout(aiRequestTimeout);
+      aiRequestTimeout = null;
+    }
+    aiRequestController = null;
+    cancelGeneratePatchBtn.disabled = true;
+    generatePatchBtn.disabled = isReadOnly;
   }
 }
 
@@ -2356,6 +2434,11 @@ commitBtn.addEventListener('click', commitSnapshot);
 generatePatchBtn.addEventListener('click', () => {
   void generatePatch();
 });
+cancelGeneratePatchBtn.addEventListener('click', () => {
+  if (!aiRequestController) return;
+  setAiStatus('Cancelling…');
+  aiRequestController.abort();
+});
 simulateBtn.addEventListener('click', simulatePatch);
 applyPatchBtn.addEventListener('click', () => {
   void applyPatch();
@@ -2378,6 +2461,9 @@ downloadBundleBtn.addEventListener('click', downloadBundle);
 aiApiBaseInput.addEventListener('input', persistAiSettingsFromForm);
 aiModelInput.addEventListener('input', persistAiSettingsFromForm);
 aiApiModeSelect.addEventListener('change', persistAiSettingsFromForm);
+aiTemperatureInput.addEventListener('input', persistAiSettingsFromForm);
+aiMaxTokensInput.addEventListener('input', persistAiSettingsFromForm);
+aiTimeoutInput.addEventListener('input', persistAiSettingsFromForm);
 aiApiKeyInput.addEventListener('input', persistAiSettingsFromForm);
 aiRememberKeyToggle.addEventListener('change', persistAiSettingsFromForm);
 

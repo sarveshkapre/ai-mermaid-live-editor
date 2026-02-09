@@ -1,11 +1,11 @@
 # ROADMAP
 
 ## Near-term
-- AI generation controls (temperature/max tokens) + cancel
 - Browser smoke automation (Playwright)
-- Import from URL into a new tab (validated)
 
 ## Shipped
+- Import from URL into a new tab (validated) (2026-02-09)
+- AI generation controls (temperature/max tokens/timeout) + cancel (2026-02-09)
 - Export history as JSON (2026-02-09)
 - AI provider connector (OpenAI-compatible) (2026-02-09)
 - Patch rollback hints (one-click undo after apply) (2026-02-09)

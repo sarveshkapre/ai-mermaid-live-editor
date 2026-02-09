@@ -152,6 +152,18 @@
                 </select>
               </label>
               <label class="field">
+                <span>Temperature</span>
+                <input id="ai-temperature" type="number" min="0" max="2" step="0.1" placeholder="e.g. 0.2" />
+              </label>
+              <label class="field">
+                <span>Max tokens</span>
+                <input id="ai-max-tokens" type="number" min="1" step="50" placeholder="e.g. 800" />
+              </label>
+              <label class="field">
+                <span>Timeout (seconds)</span>
+                <input id="ai-timeout" type="number" min="5" max="180" step="5" placeholder="45" />
+              </label>
+              <label class="field">
                 <span>API key</span>
                 <input id="ai-api-key" type="password" placeholder="Optional when using local proxy" />
               </label>
@@ -171,6 +183,7 @@
           <textarea id="instructions" placeholder="Refactor the flow into swimlanes with explicit approvals."></textarea>
           <div class="toolbar">
             <button id="generate-patch" type="button">Generate AI patch</button>
+            <button id="cancel-generate-patch" class="ghost" type="button" disabled>Cancel</button>
             <button id="simulate" class="ghost" type="button">Simulate patch</button>
             <button id="apply-patch" class="ghost" type="button">Apply patch</button>
           </div>
