@@ -449,6 +449,18 @@ select {
   position: relative;
 }
 
+.preview.pan-ready {
+  cursor: grab;
+}
+
+.preview.panning {
+  cursor: grabbing;
+}
+
+.preview.panning * {
+  user-select: none;
+}
+
 .preview-content {
   transform: scale(var(--preview-scale, 1));
   transform-origin: top left;

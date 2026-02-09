@@ -391,6 +391,7 @@ const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
 const PROJECT_KEY = 'ai-mermaid-project';
 const SHARE_SNAPSHOT_KEY = 'snap:';
+const PREVIEW_SCALE_KEY = 'ai-mermaid-preview-scale';
 const EXPORT_PREFS_KEY = 'ai-mermaid-export-prefs';
 const EXPORT_PRESET_KEY = 'ai-mermaid-export-presets';
 const EXPORT_HISTORY_KEY = 'ai-mermaid-export-history';
@@ -717,6 +718,13 @@ function updateStats() {
   updateHealth(text);
 }
 
+function loadPreviewScale() {
+  const raw = localStorage.getItem(PREVIEW_SCALE_KEY);
+  if (!raw) return 1;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : 1;
+}
+
 /**
  * @param {number} next
  */
@@ -725,6 +733,49 @@ function setPreviewScale(next) {
   previewScale = clamped;
   preview.style.setProperty('--preview-scale', String(clamped));
   zoomLabel.textContent = `${Math.round(clamped * 100)}%`;
+  try {
+    localStorage.setItem(PREVIEW_SCALE_KEY, String(clamped));
+  } catch {
+    // Ignore storage failures (e.g. disabled cookies/localStorage).
+  }
+}
+
+/**
+ * @param {unknown} target
+ */
+function isTypingElement(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target instanceof HTMLTextAreaElement) return true;
+  if (target instanceof HTMLSelectElement) return true;
+  if (target instanceof HTMLInputElement) return true;
+  return target.isContentEditable;
+}
+
+/** @type {{active: boolean, pointerId: number | null, startX: number, startY: number, startLeft: number, startTop: number}} */
+const panState = {
+  active: false,
+  pointerId: null,
+  startX: 0,
+  startY: 0,
+  startLeft: 0,
+  startTop: 0,
+};
+
+let isSpaceDown = false;
+
+function stopPreviewPan() {
+  if (!panState.active) return;
+  panState.active = false;
+  preview.classList.remove('panning');
+  const pointerId = panState.pointerId;
+  panState.pointerId = null;
+  if (pointerId !== null) {
+    try {
+      preview.releasePointerCapture(pointerId);
+    } catch {
+      // Ignore if capture was already released.
+    }
+  }
 }
 
 /**
@@ -1754,7 +1805,7 @@ function init() {
   activeTemplateId = localStorage.getItem(TEMPLATE_ACTIVE_KEY);
   renderTemplateFilters();
   renderTemplates();
-  setPreviewScale(1);
+  setPreviewScale(loadPreviewScale());
   const storedProject = loadProject();
   if (storedProject) {
     applyProjectPayload(storedProject);
@@ -1871,6 +1922,54 @@ zoomResetBtn.addEventListener('click', () => setPreviewScale(1));
 jumpErrorBtn.addEventListener('click', jumpToError);
 copySnapshotBtn.addEventListener('click', copySnapshotLink);
 downloadBundleBtn.addEventListener('click', downloadBundle);
+
+window.addEventListener('keydown', (event) => {
+  if (event.code !== 'Space') return;
+  if (isTypingElement(event.target)) return;
+  isSpaceDown = true;
+  preview.classList.add('pan-ready');
+  if (event.target instanceof HTMLElement && preview.contains(event.target)) {
+    event.preventDefault();
+  }
+});
+
+window.addEventListener('keyup', (event) => {
+  if (event.code !== 'Space') return;
+  isSpaceDown = false;
+  preview.classList.remove('pan-ready');
+  stopPreviewPan();
+});
+
+window.addEventListener('blur', () => {
+  isSpaceDown = false;
+  preview.classList.remove('pan-ready');
+  stopPreviewPan();
+});
+
+preview.addEventListener('pointerdown', (event) => {
+  if (!isSpaceDown) return;
+  if (event.button !== 0) return;
+  panState.active = true;
+  panState.pointerId = event.pointerId;
+  panState.startX = event.clientX;
+  panState.startY = event.clientY;
+  panState.startLeft = preview.scrollLeft;
+  panState.startTop = preview.scrollTop;
+  preview.classList.add('panning');
+  preview.setPointerCapture(event.pointerId);
+  event.preventDefault();
+});
+
+preview.addEventListener('pointermove', (event) => {
+  if (!panState.active || panState.pointerId !== event.pointerId) return;
+  const dx = event.clientX - panState.startX;
+  const dy = event.clientY - panState.startY;
+  preview.scrollLeft = panState.startLeft - dx;
+  preview.scrollTop = panState.startTop - dy;
+});
+
+preview.addEventListener('pointerup', stopPreviewPan);
+preview.addEventListener('pointercancel', stopPreviewPan);
 
 document.querySelectorAll('[data-action]').forEach((button) => {
   if (!(button instanceof HTMLButtonElement)) return;
