@@ -4,6 +4,14 @@ Structured, append-only notes for decisions and learnings that should persist ac
 
 ## Decisions
 
+### 2026-02-09: Add Snapshot Presentation Mode
+- Decision: Add a lightweight presentation mode (full-screen dialog) that steps through the snapshot timeline with keyboard navigation (`P`, arrow keys) and timeline “Present” entry points.
+- Why: Presentation is a common expectation for diagram editors and makes snapshot history immediately useful for reviews and demos.
+- Evidence: `make check` pass; `make smoke` pass; UI in `index.html` + render loop in `src/main.js`.
+- Commit: `eb3e3e6`
+- Confidence: high
+- Trust label: local verification
+
 ### 2026-02-09: Lazy-load Mermaid To Shrink Initial Bundle
 - Decision: Load Mermaid via dynamic import and centralize initialization in `src/lib/mermaid-loader.js`.
 - Why: Mermaid is the dominant dependency; deferring it improves first paint for users who are editing before previewing.
@@ -144,6 +152,12 @@ Structured, append-only notes for decisions and learnings that should persist ac
 
 ## Mistakes And Fixes
 
+### 2026-02-09: Smoke Test Waited For Closed Dialog To Become Visible
+- Mistake: Browser smoke check waited for `#presentation-dialog:not([open])` to be visible, but a closed `<dialog>` is hidden so the selector never became visible.
+- Root cause: Misunderstood Playwright `waitForSelector` defaults (visibility) and `<dialog>` open/close mechanics.
+- Fix: Wait for `#presentation-dialog[open]` to become detached instead.
+- Prevention rule: For dialog close checks, prefer waiting for the `[open]` selector to detach (or poll `getAttribute("open")`) rather than relying on visibility.
+
 ### 2026-02-09: Missing JSDoc Type For New Helper Caused `tsc --noEmit` Failure
 - Mistake: Added `isTypingElement(target)` without a JSDoc `@param` type, triggering `checkJs` implicit-`any` errors.
 - Root cause: TypeScript `checkJs` requires explicit JSDoc typing for new untyped parameters in strict mode.
@@ -164,6 +178,7 @@ Structured, append-only notes for decisions and learnings that should persist ac
 
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass
+- `make smoke` -> pass (post presentation mode)
 - `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
 - `curl -fsSL http://127.0.0.1:4173/ | rg -n "AI patch studio|Starter templates|import-file-btn|download-export-history|shortcuts-dialog"` -> pass
 - `gh run watch 21811936755 --exit-status` -> success

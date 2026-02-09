@@ -7,9 +7,6 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P1 (selected): Lightweight presentation mode (full-screen + step-through snapshots) with keyboard navigation and “present from timeline”.
-- [ ] P2 (selected): Extend Playwright browser smoke to cover presentation mode open + navigation.
-- [ ] P2 (selected): Docs alignment for presentation mode (README + roadmap + shortcuts).
 - [ ] P3: AI streaming output (progressively fill proposal) for OpenAI-compatible SSE.
 - [ ] P3: Surface AI token/usage metadata when providers return it (Responses/Chat Completions).
 - [ ] P3: Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
@@ -46,6 +43,9 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 | Playwright browser smoke automation | 3 | 3 | 4 | 2 | 2 | 3 |
 
 ## Implemented
+- [x] (2026-02-09) P1 presentation: added a lightweight full-screen presentation mode to step through snapshots (timeline + keyboard `P`), plus per-snapshot “Present” actions and a fullscreen toggle.
+  - Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`, `scripts/smoke-browser.mjs`, `README.md`, `docs/ROADMAP.md`, `CHANGELOG.md`, `make check`, `make smoke`.
+  - Commit: `eb3e3e6`
 - [x] (2026-02-09) P2 export: added PDF export via browser print (save as PDF) with page/margin/background settings.
   - Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`, `make check`, `make smoke`.
   - Commit: `b452332`
@@ -125,6 +125,12 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
   - Modern Mermaid markets annotation tools plus flexible export + URL sharing, suggesting differentiation is trending toward markup/annotation layers beyond vanilla Mermaid. (source: `https://modern-mermaid.live/features.html`)
   - MarkChart (native app) lists PDF/PNG/SVG export, syntax highlighting, and templates, reinforcing multi-format export parity. (source: `https://apps.apple.com/us/app/markchart-mermaid-preview/id6475648822`)
 - Mermaid security configuration supports `securityLevel` and “secure config keys” to prevent diagram directives from overriding site defaults; this matters for share links and pasted content. (source: `https://mermaid.js.org/config/schema-docs/config`, `https://mermaid.js.org/config/setup/mermaid/interfaces/MermaidConfig.html`)
+
+## Market Scan Notes (2026-02-09 cycle 5 refresh)
+- Many Mermaid editors explicitly market: autosave, zoom/pan, share links, and export to PNG/SVG/PDF as baseline expectations; several also push collaboration. Sources:
+  - Mermaid Viewer docs (export/share/autosave/collaboration). (source: `https://docs.mermaidviewer.com/mermaid-viewer/how-to-use.html`)
+  - Online Mermaid Viewer markets export SVG/PNG + URL share + pan + fullscreen link. (source: `https://mermaid-viewer.com/`)
+  - Mermaid Visualizer includes share/save/load + PNG/PDF export settings. (source: `https://viewmermaid.com/`)
 
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass (lint, typecheck, tests, build, audit)
