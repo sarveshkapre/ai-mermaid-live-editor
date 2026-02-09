@@ -204,6 +204,10 @@ const PROMPT_RECIPES = [
  */
 
 /**
+ * @typedef {{id: string, label: string, bytes: number, createdAt: number}} ExportHistoryItem
+ */
+
+/**
  * @template T
  * @param {string} id
  * @returns {T}
@@ -323,6 +327,8 @@ const clearHistoryBtn = byId('clear-history');
 const downloadHistoryBtn = byId('download-history');
 /** @type {HTMLButtonElement} */
 const downloadSourceBtn = byId('download-source');
+/** @type {HTMLButtonElement} */
+const downloadExportHistoryBtn = byId('download-export-history');
 /** @type {HTMLSelectElement} */
 const exportScaleSelect = byId('export-scale');
 /** @type {HTMLSelectElement} */
@@ -1247,6 +1253,12 @@ function downloadHistory() {
   downloadBlob(blob, 'mermaid-history.json');
 }
 
+function downloadExportHistory() {
+  const data = loadExportHistory();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, 'mermaid-export-history.json');
+}
+
 function updateExportSummary() {
   if (!lastSvg) {
     exportSummary.textContent = 'Export summary updates after render.';
@@ -1305,10 +1317,42 @@ function loadExportHistory() {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+    const normalized = parsed
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const data = /** @type {Record<string, unknown>} */ (item);
+        /** @type {ExportHistoryItem} */
+        const normalizedItem = {
+          id: typeof data.id === 'string' ? data.id : crypto.randomUUID(),
+          label: typeof data.label === 'string' ? data.label : 'Export',
+          bytes: typeof data.bytes === 'number' && Number.isFinite(data.bytes) ? data.bytes : 0,
+          createdAt: typeof data.createdAt === 'number' && Number.isFinite(data.createdAt) ? data.createdAt : 0,
+        };
+        return normalizedItem;
+      })
+      .filter((item) => item && item.createdAt > 0);
+    return normalized.filter(isExportHistoryItem);
   } catch {
     return [];
   }
+}
+
+/**
+ * @param {unknown} value
+ * @returns {value is ExportHistoryItem}
+ */
+function isExportHistoryItem(value) {
+  if (!value || typeof value !== 'object') return false;
+  const data = /** @type {Record<string, unknown>} */ (value);
+  return (
+    typeof data.id === 'string' &&
+    typeof data.label === 'string' &&
+    typeof data.bytes === 'number' &&
+    typeof data.createdAt === 'number' &&
+    Number.isFinite(data.createdAt) &&
+    data.createdAt > 0
+  );
 }
 
 /**
@@ -1850,6 +1894,7 @@ clearHistoryBtn.addEventListener('click', () => {
 });
 
 downloadHistoryBtn.addEventListener('click', downloadHistory);
+downloadExportHistoryBtn.addEventListener('click', downloadExportHistory);
 downloadSourceBtn.addEventListener('click', downloadSource);
 
 function persistExportPrefs() {

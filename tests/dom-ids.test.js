@@ -72,6 +72,7 @@ describe('index.html wiring', () => {
       'export-preset-name',
       'save-preset',
       'delete-preset',
+      'download-export-history',
       'export-history',
     ];
 
