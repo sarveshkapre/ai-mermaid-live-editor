@@ -7,10 +7,24 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P3: Add a lightweight presentation mode (full-screen with step-through snapshots).
-- [ ] P3: Add AI streaming output (progressively fill proposal) and surface token/cost metadata when available.
-- [ ] P3: Add diagram linting helpers (detect common Mermaid mistakes + quick fixes).
-- [ ] P3: Add a user template gallery (save templates + import/export).
+- [ ] P1 (selected): Lightweight presentation mode (full-screen + step-through snapshots) with keyboard navigation and “present from timeline”.
+- [ ] P2 (selected): Extend Playwright browser smoke to cover presentation mode open + navigation.
+- [ ] P2 (selected): Docs alignment for presentation mode (README + roadmap + shortcuts).
+- [ ] P3: AI streaming output (progressively fill proposal) for OpenAI-compatible SSE.
+- [ ] P3: Surface AI token/usage metadata when providers return it (Responses/Chat Completions).
+- [ ] P3: Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
+- [ ] P3: User template gallery (save personal templates + import/export).
+- [ ] P3: Diff performance: consider Myers/patience diff fallback for large edits (keep current limits).
+- [ ] P3: Multi-diagram workspace: tags + search across tabs/history.
+
+## Cycle 5 Prioritization (2026-02-09)
+Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
+
+| Task (selected) | Impact | Effort | Strategic fit | Differentiation | Risk | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Presentation mode (snapshot step-through) | 4 | 3 | 5 | 2 | 2 | 4 |
+| Smoke coverage for presentation mode | 3 | 2 | 4 | 1 | 2 | 4 |
+| Docs alignment (presentation + shortcuts) | 2 | 1 | 4 | 1 | 1 | 5 |
 
 ## Cycle 4 Prioritization (2026-02-09)
 Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
