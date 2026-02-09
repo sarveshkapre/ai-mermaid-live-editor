@@ -182,6 +182,7 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
 - `curl -fsSL http://127.0.0.1:4173/ | rg -n "AI patch studio|Starter templates|import-file-btn|download-export-history|shortcuts-dialog"` -> pass
 - `gh run watch 21811936755 --exit-status` -> success
+- `gh run watch 21841943891 --exit-status` -> success
 - `make check` -> pass (post AI patch generation + proxy)
 - `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
 - `curl -fsSL http://127.0.0.1:4173/ | rg -n "generate-patch|ai-api-base|ai-model|ai-api-mode|ai-api-key|ai-remember-key|undo-patch|patch-undo"` -> pass
