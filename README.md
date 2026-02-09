@@ -12,6 +12,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Patch preview with line diff
 - Commit history with restore
 - Auto restore point saved before patch apply
+- OpenAI-compatible patch generation (optional; bring your own provider/proxy)
 - Shareable links (URL hash)
 - SVG/PNG export
 - Preview zoom with space-drag pan
@@ -38,6 +39,22 @@ make setup
 make dev
 ```
 Open `http://localhost:5173`.
+
+## AI Patch Generation (Optional)
+This app can generate patch proposals using an OpenAI-compatible API. For security and CORS, the recommended setup is to run a local proxy and keep the API key in your shell environment (not in the browser).
+
+1. Start the proxy:
+```bash
+OPENAI_API_KEY=... node scripts/ai-proxy.mjs
+```
+
+2. In the app (AI patch studio -> AI provider settings):
+- Set `API base URL` to `http://127.0.0.1:8787/v1`
+- Choose `API mode` (Chat Completions or Responses)
+- Set `Model` (default: `gpt-4.1`)
+- Leave `API key` blank (the proxy supplies it)
+
+If you point the app directly at a provider API, do not enable “Remember API key” unless you accept the localStorage risk for that device.
 
 ## Shortcuts
 - `Ctrl/Cmd + Enter`: apply patch

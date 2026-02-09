@@ -7,7 +7,7 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P1: Integrate a real OpenAI-compatible patch generation flow (provider settings, safe request/response parsing, strict output format).
+- [ ] P2: Add AI generation controls (temperature/max tokens) + cancel/timeout UI.
 - [ ] P2: Add browser-level smoke automation (Playwright) for render + patch apply + tab lifecycle.
 - [ ] P2: Add import from URL (hash/query param) with validation and optional “open as new tab”.
 - [ ] P3: Add PDF export (print-friendly output + consistent sizing).
@@ -45,6 +45,9 @@
   - Evidence: `src/main.js`, `npm run test`.
 - [x] (2026-02-09) P2 perf: sped up line diff by trimming common prefix/suffix before DP.
   - Evidence: `src/lib/diff.js`, `tests/diff.test.js`.
+- [x] (2026-02-09) P1 AI: added OpenAI-compatible patch generation (provider settings, safe parsing, Mermaid extraction) plus one-click “Undo patch”.
+  - Evidence: `index.html`, `src/main.js`, `src/lib/ai-patch.js`, `tests/ai-patch.test.js`, `make check`.
+  - Commit: `5502d2c`
 
 ## Insights
 - Both failing GitHub runs were rooted in strict TS checks (`checkJs`) after state-heavy features landed in `src/main.js`.
