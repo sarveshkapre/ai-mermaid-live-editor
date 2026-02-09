@@ -177,3 +177,4 @@ Structured, append-only notes for decisions and learnings that should persist ac
 ## Verification Evidence (2026-02-09 cycle 3)
 - `make check` -> pass
 - `make smoke` -> pass
+- `gh run watch 21824678395 --exit-status` -> success
