@@ -132,6 +132,12 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
   - Online Mermaid Viewer markets export SVG/PNG + URL share + pan + fullscreen link. (source: `https://mermaid-viewer.com/`)
   - Mermaid Visualizer includes share/save/load + PNG/PDF export settings. (source: `https://viewmermaid.com/`)
 
+## Gap Map (2026-02-09 cycle 5)
+- Missing: AI streaming output + usage metadata; user template library (save/import/export); diagram lint quick-fixes; collaboration.
+- Weak: Diff scalability for large edits; presentation polish (speaker notes, click-to-advance hotspots, stable “fit to viewport” toggle).
+- Parity: Share links, export PNG/SVG/PDF, zoom/pan, autosave, import-from-file/URL.
+- Differentiator: Patch-first AI workflow (proposal textarea + diff preview + validation + one-click undo).
+
 ## Verification Evidence (2026-02-09)
 - `make check` -> pass (lint, typecheck, tests, build, audit)
 - `npm run test` -> pass (8 files, 23 tests)
