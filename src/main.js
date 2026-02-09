@@ -301,6 +301,24 @@ const importUrlInputEl = byId('import-url-input');
 const importUrlSubmit = byId('import-url-submit');
 /** @type {HTMLButtonElement} */
 const importUrlCancel = byId('import-url-cancel');
+/** @type {HTMLButtonElement} */
+const presentationModeBtn = byId('presentation-mode');
+/** @type {HTMLDialogElement} */
+const presentationDialog = byId('presentation-dialog');
+/** @type {HTMLButtonElement} */
+const presentationClose = byId('presentation-close');
+/** @type {HTMLButtonElement} */
+const presentationPrev = byId('presentation-prev');
+/** @type {HTMLButtonElement} */
+const presentationNext = byId('presentation-next');
+/** @type {HTMLButtonElement} */
+const presentationFullscreen = byId('presentation-fullscreen');
+/** @type {HTMLDivElement} */
+const presentationMeta = byId('presentation-meta');
+/** @type {HTMLDivElement} */
+const presentationStatus = byId('presentation-status');
+/** @type {HTMLDivElement} */
+const presentationContent = byId('presentation-content');
 /** @type {HTMLDivElement} */
 const toast = byId('toast');
 /** @type {HTMLDivElement} */
@@ -428,6 +446,8 @@ let toastTimer = null;
 let lastFocusedBeforeDialog = null;
 /** @type {HTMLElement | null} */
 let lastFocusedBeforeImportDialog = null;
+/** @type {HTMLElement | null} */
+let lastFocusedBeforePresentationDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
 /** @type {number} */
@@ -455,6 +475,12 @@ let aiRequestController = null;
 let aiRequestTimeout = null;
 /** @type {((value: string | null) => void) | null} */
 let importUrlResolver = null;
+/** @type {Array<{id:string, message:string, diagram:string, createdAt:number}>} */
+let presentationItems = [];
+/** @type {number} */
+let presentationIndex = 0;
+/** @type {number} */
+let presentationRenderSeq = 0;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
@@ -1744,8 +1770,14 @@ function renderTimeline() {
       updateDiff();
     });
 
+    const presentBtn = document.createElement('button');
+    presentBtn.textContent = 'Present';
+    presentBtn.className = 'ghost';
+    presentBtn.addEventListener('click', () => openPresentationMode(item.id));
+
     actions.appendChild(restoreBtn);
     actions.appendChild(diffBtn);
+    actions.appendChild(presentBtn);
     row.appendChild(label);
     row.appendChild(actions);
     timelineEl.appendChild(row);
@@ -2779,6 +2811,7 @@ importFileBtn.addEventListener('click', () => importFileInput.click());
 importUrlBtn.addEventListener('click', () => {
   void importMermaidFromUrl();
 });
+presentationModeBtn.addEventListener('click', () => openPresentationMode());
 importFileInput.addEventListener('change', () => {
   void importMermaidFromFile();
 });
@@ -2858,6 +2891,139 @@ function openShortcuts() {
   shortcutsClose.focus();
 }
 
+function isAnyModalOpen() {
+  return Boolean(shortcutsDialog.open || importUrlDialog.open || presentationDialog.open);
+}
+
+/**
+ * @param {string | null=} startId
+ */
+function openPresentationMode(startId = null) {
+  const items = loadHistory();
+  if (!items.length) {
+    showToast('No snapshots to present yet.');
+    return;
+  }
+
+  // Present oldest -> newest so "Next" moves forward in time.
+  presentationItems = items.slice().reverse();
+  if (startId) {
+    const index = presentationItems.findIndex((entry) => entry.id === startId);
+    presentationIndex = index >= 0 ? index : 0;
+  } else {
+    presentationIndex = 0;
+  }
+
+  lastFocusedBeforePresentationDialog = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  if (typeof presentationDialog.showModal === 'function') {
+    presentationDialog.showModal();
+  } else {
+    presentationDialog.setAttribute('open', '');
+  }
+
+  presentationClose.focus();
+  void renderPresentationSlide();
+}
+
+function closePresentationMode() {
+  if (typeof presentationDialog.close === 'function') {
+    presentationDialog.close();
+    return;
+  }
+  presentationDialog.removeAttribute('open');
+  (lastFocusedBeforePresentationDialog || presentationModeBtn).focus();
+}
+
+function updatePresentationControls() {
+  presentationPrev.disabled = presentationIndex <= 0;
+  presentationNext.disabled = presentationIndex >= presentationItems.length - 1;
+}
+
+/**
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ */
+function clampNumber(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
+/**
+ * @param {number} delta
+ */
+function stepPresentation(delta) {
+  if (!presentationItems.length) return;
+  const next = clampNumber(presentationIndex + delta, 0, presentationItems.length - 1);
+  if (next === presentationIndex) return;
+  presentationIndex = next;
+  void renderPresentationSlide();
+}
+
+async function renderPresentationSlide() {
+  const item = presentationItems[presentationIndex] || null;
+  updatePresentationControls();
+  if (!item) {
+    presentationMeta.textContent = 'No snapshots available.';
+    presentationStatus.textContent = '';
+    presentationContent.innerHTML = '';
+    return;
+  }
+
+  const seq = (presentationRenderSeq += 1);
+  const time = new Date(item.createdAt).toLocaleString();
+  presentationMeta.textContent = `${presentationIndex + 1} / ${presentationItems.length} • ${item.message} • ${time}`;
+
+  const code = item.diagram.trim();
+  if (!code) {
+    presentationStatus.textContent = 'Empty snapshot.';
+    presentationContent.innerHTML = '';
+    return;
+  }
+
+  presentationStatus.textContent = 'Rendering…';
+  presentationContent.innerHTML = '';
+
+  try {
+    const mermaid = await loadMermaid(document.body.classList.contains('theme-dark') ? 'dark' : 'neutral');
+    const { svg } = await mermaid.render(`present-${item.id}-${Date.now()}`, code);
+    if (seq !== presentationRenderSeq) return;
+    presentationContent.innerHTML = svg;
+    presentationStatus.textContent = '';
+  } catch (error) {
+    if (seq !== presentationRenderSeq) return;
+    presentationContent.innerHTML = '';
+    presentationStatus.textContent = `Error: ${errorToMessage(error)}`;
+  } finally {
+    if (seq === presentationRenderSeq) {
+      updatePresentationControls();
+    }
+  }
+}
+
+async function togglePresentationFullscreen() {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    if (typeof presentationDialog.requestFullscreen === 'function') {
+      await presentationDialog.requestFullscreen();
+      return;
+    }
+    if (typeof document.documentElement.requestFullscreen === 'function') {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch {
+    showToast('Fullscreen unavailable.');
+  }
+}
+
+function syncPresentationFullscreenLabel() {
+  presentationFullscreen.textContent = document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen';
+}
+
 function closeShortcuts() {
   if (typeof shortcutsDialog.close === 'function') {
     shortcutsDialog.close();
@@ -2872,6 +3038,38 @@ shortcutsClose.addEventListener('click', closeShortcuts);
 shortcutsDialog.addEventListener('close', () => {
   (lastFocusedBeforeDialog || helpBtn).focus();
 });
+
+presentationClose.addEventListener('click', closePresentationMode);
+presentationPrev.addEventListener('click', () => stepPresentation(-1));
+presentationNext.addEventListener('click', () => stepPresentation(1));
+presentationFullscreen.addEventListener('click', () => {
+  void togglePresentationFullscreen();
+});
+presentationDialog.addEventListener('keydown', (event) => {
+  if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+    event.preventDefault();
+    stepPresentation(-1);
+  }
+  if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+    event.preventDefault();
+    stepPresentation(1);
+  }
+  if (event.key === 'Home') {
+    event.preventDefault();
+    presentationIndex = 0;
+    void renderPresentationSlide();
+  }
+  if (event.key === 'End') {
+    event.preventDefault();
+    presentationIndex = Math.max(0, presentationItems.length - 1);
+    void renderPresentationSlide();
+  }
+});
+presentationDialog.addEventListener('close', () => {
+  (lastFocusedBeforePresentationDialog || presentationModeBtn).focus();
+});
+document.addEventListener('fullscreenchange', syncPresentationFullscreenLabel);
+syncPresentationFullscreenLabel();
 
 importUrlClose.addEventListener('click', () => settleImportUrlDialog(null));
 importUrlCancel.addEventListener('click', () => settleImportUrlDialog(null));
@@ -2929,6 +3127,18 @@ window.addEventListener('keydown', (event) => {
     if (!isEditable) {
       event.preventDefault();
       openShortcuts();
+    }
+  }
+
+  if (!isCmd && event.key.toLowerCase() === 'p' && !isAnyModalOpen()) {
+    const target = event.target;
+    const isEditable =
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLInputElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+    if (!isEditable) {
+      event.preventDefault();
+      openPresentationMode();
     }
   }
 });

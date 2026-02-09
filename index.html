@@ -231,6 +231,7 @@
             <button id="reset" class="ghost" type="button">Reset to starter</button>
             <button id="clear-history" class="ghost" type="button">Clear history</button>
             <button id="download-history" type="button">Download history JSON</button>
+            <button id="presentation-mode" class="ghost" type="button">Presentation mode</button>
             <button id="restore-draft" class="ghost" type="button">Restore draft</button>
             <button id="clear-draft" class="ghost" type="button">Clear draft</button>
             <button id="download-source" class="ghost" type="button">Download Mermaid</button>
@@ -356,6 +357,10 @@
           <span>Open shortcuts</span>
         </div>
         <div class="shortcut-row">
+          <kbd>P</kbd>
+          <span>Open presentation mode</span>
+        </div>
+        <div class="shortcut-row">
           <kbd>F</kbd>
           <span>Toggle focus mode</span>
         </div>
@@ -385,6 +390,29 @@
           <button id="import-url-cancel" class="ghost" type="button">Cancel</button>
         </div>
         <p class="hint">Tip: some hosts block cross-origin fetches; in that case, download the file and use “Import Mermaid file”.</p>
+      </div>
+    </dialog>
+
+    <dialog id="presentation-dialog" class="presentation-dialog" aria-labelledby="presentation-title">
+      <div class="presentation-shell">
+        <div class="presentation-bar">
+          <div class="presentation-heading">
+            <h2 id="presentation-title">Presentation mode</h2>
+            <div id="presentation-meta" class="hint">Use Left/Right arrows to step through snapshots.</div>
+          </div>
+          <div class="presentation-actions">
+            <button id="presentation-fullscreen" class="ghost" type="button">Fullscreen</button>
+            <button id="presentation-prev" class="ghost" type="button">Prev</button>
+            <button id="presentation-next" class="ghost" type="button">Next</button>
+            <button id="presentation-close" class="ghost" type="button">Close</button>
+          </div>
+        </div>
+        <div class="presentation-canvas">
+          <div id="presentation-status" class="hint" role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="presentation-stage">
+            <div id="presentation-content" class="presentation-content"></div>
+          </div>
+        </div>
       </div>
     </dialog>
 

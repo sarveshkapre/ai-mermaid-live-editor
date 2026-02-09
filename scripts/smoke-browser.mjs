@@ -85,6 +85,12 @@ async function main() {
       }
     }
 
+    page.once('dialog', async (dialog) => {
+      await dialog.accept('Smoke snapshot');
+    });
+    await page.click('#commit');
+    await page.waitForSelector('#timeline .timeline-item');
+
     await page.click('#simulate');
     {
       const deadline = Date.now() + 10_000;
@@ -104,6 +110,21 @@ async function main() {
 
     await page.click('#undo-patch');
     await page.waitForSelector('#patch-undo[hidden]');
+
+    await page.click('#presentation-mode');
+    await page.waitForSelector('#presentation-dialog[open]');
+    await page.waitForSelector('#presentation-content svg', { timeout: 15_000 });
+    {
+      const meta = await page.textContent('#presentation-meta');
+      if (typeof meta !== 'string' || !meta.includes('/')) {
+        throw new Error(`Expected presentation meta to include slide counts, got: ${String(meta)}`);
+      }
+    }
+    await page.click('#presentation-next');
+    await page.waitForTimeout(250);
+    await page.click('#presentation-prev');
+    await page.click('#presentation-close');
+    await page.waitForSelector('#presentation-dialog[open]', { state: 'detached' });
 
     await page.click('#add-tab');
     {

@@ -11,6 +11,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Live Mermaid rendering with error surfacing
 - Patch preview with line diff
 - Commit history with restore
+- Presentation mode (step through snapshots full-screen)
 - Auto restore point saved before patch apply
 - OpenAI-compatible patch generation (optional; bring your own provider/proxy)
 - AI generation controls (temperature/max tokens/timeout) + cancel
@@ -70,6 +71,7 @@ If you point the app directly at a provider API, do not enable “Remember API k
 ## Shortcuts
 - `Ctrl/Cmd + Enter`: apply patch
 - `Ctrl/Cmd + S`: commit snapshot
+- `P`: open presentation mode
 - `?`: open shortcuts dialog
 
 ## License

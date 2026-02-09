@@ -5,6 +5,7 @@
 - Live Mermaid render + diff-based patch apply
 - Commit timeline, share links, SVG/PNG export
 - UX polish: shortcuts dialog (`?`), copy-link feedback, safer clipboard fallback
+- UX: presentation mode (full-screen snapshot step-through)
 - Reliability: diff preview stays synced with editor updates
 - Reliability: draft autosave with restore/clear actions
 - UX: copy/download Mermaid source

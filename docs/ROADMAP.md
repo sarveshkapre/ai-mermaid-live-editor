@@ -1,9 +1,10 @@
 # ROADMAP
 
 ## Near-term
-- Lightweight presentation mode (full-screen + step-through snapshots)
+- AI streaming patch output (progressively fill proposal) + usage metadata when available.
 
 ## Shipped
+- Presentation mode (full-screen + step-through snapshots) (2026-02-09)
 - PDF export (print-friendly sizing) (2026-02-09)
 - Format Mermaid (non-destructive preview) (2026-02-09)
 - Share-link UX for multi-tab workflows (explicit “open in new tab” option) (2026-02-09)
