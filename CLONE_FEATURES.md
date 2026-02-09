@@ -15,6 +15,15 @@
 - [ ] P3: Add diagram linting helpers (detect common Mermaid mistakes + quick fixes).
 - [ ] P3: Add a template gallery (save user templates + import/export).
 
+## Cycle 3 Prioritization (2026-02-09)
+Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
+
+| Task (selected) | Impact | Effort | Strategic fit | Differentiation | Risk | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Import Mermaid from URL into new tab | 4 | 2 | 5 | 2 | 2 | 4 |
+| AI generation controls + cancel | 4 | 2 | 5 | 3 | 2 | 4 |
+| Playwright browser smoke automation | 3 | 3 | 4 | 2 | 2 | 3 |
+
 ## Implemented
 - [x] (2026-02-09) P0 repo contract: tracked the root `AGENTS.md` operating contract and refreshed the prioritized feature backlog.
   - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`.
