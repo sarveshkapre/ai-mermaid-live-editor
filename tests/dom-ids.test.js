@@ -70,6 +70,7 @@ describe('index.html wiring', () => {
       'clear-draft',
       'download-source',
       'import-file-btn',
+      'import-url-btn',
       'import-file',
       'export-scale',
       'export-width',

@@ -350,6 +350,8 @@ const downloadSourceBtn = byId('download-source');
 const downloadExportHistoryBtn = byId('download-export-history');
 /** @type {HTMLButtonElement} */
 const importFileBtn = byId('import-file-btn');
+/** @type {HTMLButtonElement} */
+const importUrlBtn = byId('import-url-btn');
 /** @type {HTMLInputElement} */
 const importFileInput = byId('import-file');
 /** @type {HTMLSelectElement} */
@@ -756,6 +758,129 @@ async function importMermaidFromFile() {
   }
 }
 
+/**
+ * @param {string} text
+ * @returns {number}
+ */
+function utf8ByteLength(text) {
+  return new TextEncoder().encode(text).length;
+}
+
+/**
+ * @param {unknown} payload
+ * @returns {boolean}
+ */
+function isEmptyProjectPayload(payload) {
+  if (!payload || typeof payload !== 'object') return true;
+  const data = /** @type {Record<string, unknown>} */ (payload);
+  const fields = ['title', 'audience', 'owner', 'purpose'];
+  return fields.every((key) => typeof data[key] !== 'string' || !data[key].trim());
+}
+
+function isProjectFormEmpty() {
+  return (
+    !projectTitleInput.value.trim() &&
+    !projectAudienceInput.value.trim() &&
+    !projectOwnerInput.value.trim() &&
+    !projectPurposeInput.value.trim()
+  );
+}
+
+/**
+ * @typedef {{title: string, diagram: string, project: unknown | null}} ImportFromUrlResult
+ */
+
+/**
+ * @param {string} input
+ * @returns {Promise<ImportFromUrlResult>}
+ */
+async function resolveImportFromUrlInput(input) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    throw new Error('Missing URL.');
+  }
+
+  const rawHash =
+    trimmed.startsWith('#') ? trimmed.slice(1) : trimmed.startsWith('snap:') ? trimmed : '';
+  if (rawHash) {
+    const snapshot = normalizeSnapshotPayload(decodeSnapshot(rawHash));
+    if (snapshot) return { title: snapshot.tabTitle, diagram: snapshot.diagram, project: snapshot.project || null };
+    const decoded = decodeHash(rawHash);
+    if (!decoded) throw new Error('Hash did not decode to Mermaid text.');
+    return { title: 'Imported share link', diagram: decoded, project: null };
+  }
+
+  /** @type {URL | null} */
+  let url = null;
+  try {
+    if (trimmed.startsWith('/')) {
+      url = new URL(trimmed, window.location.origin);
+    } else if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+      url = new URL(trimmed);
+    }
+  } catch {
+    url = null;
+  }
+
+  if (!url) {
+    throw new Error('Invalid URL. Include https:// (or paste a share-link hash).');
+  }
+
+  const hash = url.hash.replace('#', '');
+  if (hash) {
+    const snapshot = normalizeSnapshotPayload(decodeSnapshot(hash));
+    if (snapshot) {
+      return { title: snapshot.tabTitle, diagram: snapshot.diagram, project: snapshot.project || null };
+    }
+    const decoded = decodeHash(hash);
+    if (decoded) {
+      const filename = decodeURIComponent(url.pathname.split('/').pop() || 'share-link');
+      return { title: tabTitleFromFilename(filename), diagram: decoded, project: null };
+    }
+  }
+
+  const fetchUrl = new URL(url.toString());
+  fetchUrl.hash = '';
+  const res = await fetch(fetchUrl.toString(), { method: 'GET' });
+  if (!res.ok) {
+    throw new Error(`Fetch failed (HTTP ${res.status}).`);
+  }
+  const text = await res.text();
+  const filename = decodeURIComponent(fetchUrl.pathname.split('/').pop() || 'imported.mmd');
+  return { title: tabTitleFromFilename(filename), diagram: text, project: null };
+}
+
+async function importMermaidFromUrl() {
+  if (isReadOnly) return;
+  const input = window.prompt(
+    'Import from URL',
+    'https://example.com/diagram.mmd\n\nTip: you can also paste a share link from this app.',
+  );
+  if (!input) return;
+
+  try {
+    const resolved = await resolveImportFromUrlInput(input);
+    const bytes = utf8ByteLength(resolved.diagram);
+    if (bytes > IMPORT_LIMITS.maxBytes) {
+      showToast(`URL content too large to import (max ${Math.round(IMPORT_LIMITS.maxBytes / 1000)}kB).`);
+      return;
+    }
+    const diagram = resolved.diagram.trim() || DEFAULT_DIAGRAM.trim();
+    const validation = await validatePatchProposal(diagram);
+    addImportedTab(resolved.title, diagram);
+    if (!validation.ok) {
+      const line = validation.line ? ` (line ${validation.line})` : '';
+      showToast(`Imported diagram has Mermaid errors${line}.`);
+    }
+    if (resolved.project && isProjectFormEmpty() && !isEmptyProjectPayload(resolved.project)) {
+      applyProjectPayload(resolved.project);
+      saveProject(getProjectPayload());
+    }
+  } catch (error) {
+    showToast(`Import failed: ${errorToMessage(error)}`);
+  }
+}
+
 function loadTabs() {
   const raw = localStorage.getItem(TABS_KEY);
   let parsedTabs = null;
@@ -1028,6 +1153,7 @@ function applyReadOnlyMode() {
     clearDraftBtn,
     downloadSourceBtn,
     importFileBtn,
+    importUrlBtn,
     addTabBtn,
     duplicateTabBtn,
     renameTabBtn,
@@ -2154,12 +2280,18 @@ function init() {
     renderTabs();
     const decoded = hash ? decodeHash(hash) : null;
     if (decoded) {
-      const active = getActiveTab();
-      if (active) {
-        active.diagram = decoded;
-        active.updatedAt = Date.now();
-        editor.value = decoded;
-        persistTabs();
+      const openAsNewTab = params.get('tab') === 'new' || params.get('newTab') === '1' || params.get('import') === '1';
+      if (openAsNewTab) {
+        addImportedTab('Imported share link', decoded);
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      } else {
+        const active = getActiveTab();
+        if (active) {
+          active.diagram = decoded;
+          active.updatedAt = Date.now();
+          editor.value = decoded;
+          persistTabs();
+        }
       }
     } else {
       const draft = loadDraft();
@@ -2325,6 +2457,9 @@ downloadHistoryBtn.addEventListener('click', downloadHistory);
 downloadExportHistoryBtn.addEventListener('click', downloadExportHistory);
 downloadSourceBtn.addEventListener('click', downloadSource);
 importFileBtn.addEventListener('click', () => importFileInput.click());
+importUrlBtn.addEventListener('click', () => {
+  void importMermaidFromUrl();
+});
 importFileInput.addEventListener('change', () => {
   void importMermaidFromFile();
 });
