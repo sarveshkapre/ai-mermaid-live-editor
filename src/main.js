@@ -1061,9 +1061,12 @@ async function applyPatch() {
     showToast('Patch contains Mermaid errors.');
     return;
   }
+  // Create a restore point so "Apply patch" is never irreversible.
+  addSnapshot(editor.value, 'Auto: before patch');
+  renderTimeline();
   editor.value = next;
   scheduleRender();
-  showToast('Patch applied.');
+  showToast('Patch applied. Restore point saved in timeline.');
 }
 
 function renderTimeline() {
