@@ -7,13 +7,24 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P3: Add PDF export (print-friendly output + consistent sizing).
-- [ ] P3: Add “format Mermaid” action (basic pretty-print) with a non-destructive preview.
+- [ ] P2: Add PDF export (print-friendly output + consistent sizing).
+- [ ] P2: Add “format Mermaid” action (safe whitespace normalization) with a non-destructive preview.
+- [ ] P2: Improve share-link UX for multi-tab workflows (explicit “open in new tab” copy option; keep current tab intact).
+- [ ] P2: Replace `prompt()`-based “Import from URL” with a small modal dialog (better UX + less brittle).
 - [ ] P3: Add a lightweight presentation mode (full-screen with step-through snapshots).
-- [ ] P3: Add share-link UX for multi-tab workflows (explicit “open in new tab” option, preserve current tab).
 - [ ] P3: Add AI streaming output (progressively fill proposal) and surface token/cost metadata when available.
 - [ ] P3: Add diagram linting helpers (detect common Mermaid mistakes + quick fixes).
-- [ ] P3: Add a template gallery (save user templates + import/export).
+- [ ] P3: Add a user template gallery (save templates + import/export).
+
+## Cycle 4 Prioritization (2026-02-09)
+Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
+
+| Task (selected) | Impact | Effort | Strategic fit | Differentiation | Risk | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| PDF export (print-friendly) | 4 | 3 | 5 | 2 | 2 | 4 |
+| Share-link “open in new tab” copy UX | 4 | 2 | 5 | 2 | 1 | 5 |
+| Import-from-URL modal dialog | 3 | 2 | 4 | 1 | 1 | 4 |
+| Format Mermaid (safe whitespace) with preview | 3 | 2 | 4 | 1 | 1 | 4 |
 
 ## Cycle 3 Prioritization (2026-02-09)
 Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).

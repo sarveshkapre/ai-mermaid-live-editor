@@ -694,6 +694,10 @@ dialog.dialog::backdrop {
   gap: 10px;
 }
 
+.dialog textarea {
+  min-height: 120px;
+}
+
 .shortcut-row {
   display: grid;
   grid-template-columns: auto 1fr;

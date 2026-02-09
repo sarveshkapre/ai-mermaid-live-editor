@@ -22,5 +22,10 @@
 - CI: fixed strict typecheck regressions in `src/main.js` and added helper unit tests
 - CI: workflow now uses `npm ci` with npm cache for deterministic installs
 - UX: import Mermaid from URL (remote file or share link) into a new tab
+- UX: import-from-URL modal dialog (replaces brittle `prompt()`)
+- UX: share links can be copied in “open as new tab” mode (`?tab=new`)
+- UX: snapshot links can be copied in importable form (opens as a new tab, editable)
+- UX: PDF export (print / save as PDF) with sizing settings
+- UX: “Format Mermaid” action (safe whitespace normalization) with diff preview
 - AI: generation controls (temperature/max tokens/timeout) + cancel
 - DX: optional Playwright browser smoke check (`make smoke`)

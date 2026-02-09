@@ -15,10 +15,12 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - OpenAI-compatible patch generation (optional; bring your own provider/proxy)
 - AI generation controls (temperature/max tokens/timeout) + cancel
 - Shareable links (URL hash)
+- Share links that import into a new tab (copy link with `?tab=new`)
 - SVG/PNG export
+- PDF export (print / save as PDF)
 - Preview zoom with space-drag pan
 - Import Mermaid files into tabs
-- Import Mermaid from URL (remote file or share link) into a new tab (tip: add `?tab=new` to share links to avoid overwriting the active tab)
+- Import Mermaid from URL (remote file or share link) into a new tab
 - Draft autosave with restore/clear
 - Copy/download Mermaid source
 - PNG export controls (scale, transparency)
@@ -34,6 +36,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Dark mode and keyboard shortcuts
 - Patch validation before apply (line-aware Mermaid errors)
 - Tab persistence recovery for malformed local state
+- Format Mermaid (safe whitespace normalization) with non-destructive preview
 
 ## Quickstart
 ```bash

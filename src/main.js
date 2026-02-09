@@ -284,11 +284,23 @@ const themeToggle = byId('theme-toggle');
 /** @type {HTMLButtonElement} */
 const copyLink = byId('copy-link');
 /** @type {HTMLButtonElement} */
+const copyLinkNewTab = byId('copy-link-newtab');
+/** @type {HTMLButtonElement} */
 const helpBtn = byId('help');
 /** @type {HTMLDialogElement} */
 const shortcutsDialog = byId('shortcuts-dialog');
 /** @type {HTMLButtonElement} */
 const shortcutsClose = byId('shortcuts-close');
+/** @type {HTMLDialogElement} */
+const importUrlDialog = byId('import-url-dialog');
+/** @type {HTMLButtonElement} */
+const importUrlClose = byId('import-url-close');
+/** @type {HTMLTextAreaElement} */
+const importUrlInputEl = byId('import-url-input');
+/** @type {HTMLButtonElement} */
+const importUrlSubmit = byId('import-url-submit');
+/** @type {HTMLButtonElement} */
+const importUrlCancel = byId('import-url-cancel');
 /** @type {HTMLDivElement} */
 const toast = byId('toast');
 /** @type {HTMLDivElement} */
@@ -324,6 +336,8 @@ const useFilenamesToggle = byId('use-filenames');
 /** @type {HTMLButtonElement} */
 const copySnapshotBtn = byId('copy-snapshot');
 /** @type {HTMLButtonElement} */
+const copySnapshotImportBtn = byId('copy-snapshot-import');
+/** @type {HTMLButtonElement} */
 const downloadBundleBtn = byId('download-bundle');
 /** @type {HTMLDivElement} */
 const healthEl = byId('health');
@@ -340,6 +354,10 @@ const applyPatchBtn = byId('apply-patch');
 const exportSvgBtn = byId('export-svg');
 /** @type {HTMLButtonElement} */
 const exportPngBtn = byId('export-png');
+/** @type {HTMLButtonElement} */
+const exportPdfBtn = byId('export-pdf');
+/** @type {HTMLButtonElement} */
+const formatMermaidBtn = byId('format-mermaid');
 /** @type {HTMLButtonElement} */
 const copySourceBtn = byId('copy-source');
 /** @type {HTMLButtonElement} */
@@ -376,6 +394,14 @@ const exportSvgScaleSelect = byId('export-svg-scale');
 const exportSvgInlineToggle = byId('export-svg-inline');
 /** @type {HTMLInputElement} */
 const exportSvgMinifyToggle = byId('export-svg-minify');
+/** @type {HTMLSelectElement} */
+const pdfPageSelect = byId('pdf-page');
+/** @type {HTMLSelectElement} */
+const pdfOrientationSelect = byId('pdf-orientation');
+/** @type {HTMLSelectElement} */
+const pdfMarginSelect = byId('pdf-margin');
+/** @type {HTMLInputElement} */
+const pdfWhiteBgToggle = byId('pdf-white-bg');
 /** @type {HTMLDivElement} */
 const exportSummary = byId('export-summary');
 /** @type {HTMLSelectElement} */
@@ -400,6 +426,8 @@ let renderTimer = null;
 let toastTimer = null;
 /** @type {HTMLElement | null} */
 let lastFocusedBeforeDialog = null;
+/** @type {HTMLElement | null} */
+let lastFocusedBeforeImportDialog = null;
 /** @type {number | null} */
 let lastDraftSavedAt = null;
 /** @type {number} */
@@ -425,6 +453,8 @@ let lastPatchRestoreId = null;
 let aiRequestController = null;
 /** @type {number | null} */
 let aiRequestTimeout = null;
+/** @type {((value: string | null) => void) | null} */
+let importUrlResolver = null;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
@@ -898,10 +928,7 @@ async function resolveImportFromUrlInput(input) {
 
 async function importMermaidFromUrl() {
   if (isReadOnly) return;
-  const input = window.prompt(
-    'Import from URL',
-    'https://example.com/diagram.mmd\n\nTip: you can also paste a share link from this app.',
-  );
+  const input = await requestImportUrlInput();
   if (!input) return;
 
   try {
@@ -925,6 +952,53 @@ async function importMermaidFromUrl() {
   } catch (error) {
     showToast(`Import failed: ${errorToMessage(error)}`);
   }
+}
+
+function requestImportUrlInput() {
+  if (typeof importUrlDialog.showModal !== 'function') {
+    return Promise.resolve(
+      window.prompt(
+        'Import from URL',
+        'https://example.com/diagram.mmd\n\nTip: you can also paste a share link or hash from this app.',
+      ) || null,
+    );
+  }
+
+  if (importUrlResolver) {
+    // Only one dialog at a time.
+    try {
+      importUrlDialog.close();
+    } catch {
+      importUrlDialog.removeAttribute('open');
+    }
+    importUrlResolver(null);
+    importUrlResolver = null;
+  }
+
+  importUrlInputEl.value = '';
+  lastFocusedBeforeImportDialog = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  importUrlDialog.showModal();
+  queueMicrotask(() => importUrlInputEl.focus());
+
+  return new Promise((resolve) => {
+    importUrlResolver = resolve;
+  });
+}
+
+/**
+ * @param {string | null} value
+ */
+function settleImportUrlDialog(value) {
+  if (!importUrlResolver) return;
+  const resolve = importUrlResolver;
+  importUrlResolver = null;
+  try {
+    importUrlDialog.close();
+  } catch {
+    importUrlDialog.removeAttribute('open');
+  }
+  resolve(value);
+  (lastFocusedBeforeImportDialog || importUrlBtn).focus();
 }
 
 function loadTabs() {
@@ -1190,6 +1264,8 @@ function applyReadOnlyMode() {
     applyPatchBtn,
     exportSvgBtn,
     exportPngBtn,
+    exportPdfBtn,
+    formatMermaidBtn,
     copySourceBtn,
     copySvgBtn,
     copyPngBtn,
@@ -1739,6 +1815,19 @@ async function copyShareLink() {
   }
 }
 
+async function copyShareLinkNewTab() {
+  const hash = encodeHash(editor.value);
+  const url = `${window.location.origin}${window.location.pathname}?tab=new#${hash}`;
+  window.history.replaceState(null, '', `#${hash}`);
+  try {
+    await writeClipboardText(url);
+    showToast('New-tab share link copied.');
+  } catch {
+    showToast('Copy failed. Link shown in prompt.');
+    window.prompt('Copy share link (new tab)', url);
+  }
+}
+
 async function copySnapshotLink() {
   const active = getActiveTab();
   if (!active) return;
@@ -1757,6 +1846,63 @@ async function copySnapshotLink() {
     showToast('Copy failed. Link shown in prompt.');
     window.prompt('Copy snapshot link', url);
   }
+}
+
+async function copySnapshotImportLink() {
+  const active = getActiveTab();
+  if (!active) return;
+  const payload = {
+    diagram: editor.value,
+    tabTitle: active.title,
+    project: getProjectPayload(),
+    createdAt: Date.now(),
+  };
+  const hash = encodeSnapshot(payload);
+  const url = `${window.location.origin}${window.location.pathname}?tab=new&import=1#${hash}`;
+  try {
+    await writeClipboardText(url);
+    showToast('Importable snapshot link copied.');
+  } catch {
+    showToast('Copy failed. Link shown in prompt.');
+    window.prompt('Copy snapshot import link', url);
+  }
+}
+
+/**
+ * Safe, low-risk formatting: normalize line endings, trim trailing whitespace, and replace tabs.
+ * @param {string} input
+ */
+function formatMermaidWhitespace(input) {
+  const normalized = input.replace(/\r\n/g, '\n').replace(/\t/g, '  ');
+  const lines = normalized.split('\n').map((line) => line.replace(/\s+$/g, ''));
+  // Avoid over-opinionated formatting; just cap excessive blank lines.
+  const compacted = [];
+  let blankRun = 0;
+  for (const line of lines) {
+    if (!line.trim()) {
+      blankRun += 1;
+      if (blankRun <= 2) compacted.push('');
+      continue;
+    }
+    blankRun = 0;
+    compacted.push(line);
+  }
+  return `${compacted.join('\n').trimEnd()}\n`;
+}
+
+function stageFormattedMermaid() {
+  if (isReadOnly) return;
+  const current = editor.value;
+  const formatted = formatMermaidWhitespace(current);
+  if (formatted === current) {
+    showToast('Already formatted.');
+    return;
+  }
+  proposal.value = formatted;
+  updateDiff();
+  document.getElementById('workspace-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  proposal.focus();
+  showToast('Formatted output staged in Patch proposal. Review diff, then Apply patch.');
 }
 
 function exportSvg() {
@@ -1784,6 +1930,63 @@ function exportPng() {
     .catch(() => {
       showToast('Export failed.');
     });
+}
+
+function exportPdf() {
+  if (!lastSvg) {
+    showToast('Render a diagram first.');
+    return;
+  }
+  const page = pdfPageSelect.value === 'a4' ? 'A4' : pdfPageSelect.value === 'letter' ? 'letter' : '';
+  const orientation =
+    pdfOrientationSelect.value === 'portrait' ? 'portrait' : pdfOrientationSelect.value === 'landscape' ? 'landscape' : '';
+  const marginMm = Math.max(0, Math.min(40, Number(pdfMarginSelect.value) || 12));
+  const base = applySvgScale(lastSvg, Number(exportSvgScaleSelect.value) || 1);
+  const scaled = applySvgWidth(base, resolveExportWidth());
+  const svg = exportSvgInlineToggle.checked ? inlineSvgStyles(scaled) : scaled;
+  const bg = pdfWhiteBgToggle.checked ? '#ffffff' : 'transparent';
+  const sizeRule = page ? `${page}${orientation ? ` ${orientation}` : ''}` : '';
+  const pageCss = sizeRule ? `@page{size:${sizeRule};margin:${marginMm}mm;}` : `@page{margin:${marginMm}mm;}`;
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Export PDF</title>
+  <style>
+    ${pageCss}
+    html,body{height:100%;}
+    body{margin:0;background:${bg};font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
+    .wrap{box-sizing:border-box;min-height:100%;display:flex;align-items:center;justify-content:center;padding:${marginMm}mm;}
+    .wrap svg{width:100% !important;height:auto !important;max-height:100%;}
+    @media print{
+      body{background:${bg};}
+      .wrap{padding:0;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">${svg}</div>
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => window.print(), 200);
+    });
+    window.addEventListener('afterprint', () => {
+      try { window.close(); } catch {}
+    });
+  </script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'noopener,noreferrer');
+  if (!win) {
+    showToast('Popup blocked. Allow popups to export PDF.');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  addExportHistory('PDF (print)', svg.length);
 }
 
 async function downloadBundle() {
@@ -1849,7 +2052,9 @@ function updateExportSummary() {
   const pngHeight = Math.round(pngWidth * (dims.height / dims.width));
   const svgWidth = Math.round(widthValue * (widthPreset === 'auto' ? svgScale : 1));
   const svgHeight = Math.round(svgWidth * (dims.height / dims.width));
-  exportSummary.textContent = `PNG ${pngWidth}×${pngHeight}px · SVG ${svgWidth}×${svgHeight}px`;
+  const pdfPage = pdfPageSelect.value === 'auto' ? 'PDF print' : `PDF ${pdfPageSelect.value.toUpperCase()}`;
+  const pdfOrientation = pdfOrientationSelect.value === 'auto' ? '' : ` ${pdfOrientationSelect.value}`;
+  exportSummary.textContent = `PNG ${pngWidth}×${pngHeight}px · SVG ${svgWidth}×${svgHeight}px · ${pdfPage}${pdfOrientation}`;
 }
 
 /**
@@ -1961,6 +2166,10 @@ function collectExportPrefs() {
     svgMinify: exportSvgMinifyToggle.checked,
     width: exportWidthSelect.value,
     customWidth: Number(exportWidthCustomInput.value) || 0,
+    pdfPage: pdfPageSelect.value,
+    pdfOrientation: pdfOrientationSelect.value,
+    pdfMargin: Number(pdfMarginSelect.value) || 12,
+    pdfWhiteBg: pdfWhiteBgToggle.checked,
   };
 }
 
@@ -1976,6 +2185,10 @@ function applyExportPrefs(prefs) {
   if (typeof prefs.svgMinify === 'boolean') exportSvgMinifyToggle.checked = prefs.svgMinify;
   if (typeof prefs.width === 'string') exportWidthSelect.value = prefs.width;
   if (typeof prefs.customWidth === 'number') exportWidthCustomInput.value = String(prefs.customWidth);
+  if (typeof prefs.pdfPage === 'string') pdfPageSelect.value = prefs.pdfPage;
+  if (typeof prefs.pdfOrientation === 'string') pdfOrientationSelect.value = prefs.pdfOrientation;
+  if (typeof prefs.pdfMargin === 'number') pdfMarginSelect.value = String(prefs.pdfMargin);
+  if (typeof prefs.pdfWhiteBg === 'boolean') pdfWhiteBgToggle.checked = prefs.pdfWhiteBg;
   resolveExportWidth();
   updateExportSummary();
 }
@@ -2303,6 +2516,14 @@ function isTooLargeForDiff(before, after) {
   return total > DIFF_LIMITS.maxChars || lines > DIFF_LIMITS.maxLines;
 }
 
+function clearImportUrlState() {
+  const url = new URL(window.location.href);
+  url.hash = '';
+  ['tab', 'newTab', 'import', 'mode', 'ro'].forEach((key) => url.searchParams.delete(key));
+  const next = `${url.pathname}${url.search}`;
+  window.history.replaceState(null, '', next);
+}
+
 function init() {
   loadTabs();
   const rawPrefs = localStorage.getItem(EXPORT_PREFS_KEY);
@@ -2334,10 +2555,19 @@ function init() {
   const params = new URLSearchParams(window.location.search);
   const hash = window.location.hash.replace('#', '');
   const snapshot = normalizeSnapshotPayload(decodeSnapshot(hash));
-  isReadOnly = params.get('mode') === 'readonly' || params.get('ro') === '1' || Boolean(snapshot);
+  const importAsNewTab = params.get('tab') === 'new' || params.get('newTab') === '1' || params.get('import') === '1';
+  const forcedReadOnly = params.get('mode') === 'readonly' || params.get('ro') === '1';
+  isReadOnly = forcedReadOnly || (Boolean(snapshot) && !importAsNewTab);
   applyReadOnlyMode();
 
-  if (snapshot) {
+  if (snapshot && importAsNewTab) {
+    const diagram = snapshot.diagram.trim() || DEFAULT_DIAGRAM.trim();
+    addImportedTab(snapshot.tabTitle, diagram);
+    if (snapshot.project && isProjectFormEmpty()) {
+      applyProjectPayload(snapshot.project);
+    }
+    clearImportUrlState();
+  } else if (snapshot) {
     const now = Date.now();
     tabs = [
       {
@@ -2358,10 +2588,9 @@ function init() {
     renderTabs();
     const decoded = hash ? decodeHash(hash) : null;
     if (decoded) {
-      const openAsNewTab = params.get('tab') === 'new' || params.get('newTab') === '1' || params.get('import') === '1';
-      if (openAsNewTab) {
+      if (importAsNewTab) {
         addImportedTab('Imported share link', decoded);
-        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+        clearImportUrlState();
       } else {
         const active = getActiveTab();
         if (active) {
@@ -2446,6 +2675,8 @@ applyPatchBtn.addEventListener('click', () => {
 undoPatchBtn.addEventListener('click', undoLastPatch);
 exportSvgBtn.addEventListener('click', exportSvg);
 exportPngBtn.addEventListener('click', exportPng);
+exportPdfBtn.addEventListener('click', exportPdf);
+formatMermaidBtn.addEventListener('click', stageFormattedMermaid);
 copySourceBtn.addEventListener('click', copySource);
 copySvgBtn.addEventListener('click', copySvg);
 copyPngBtn.addEventListener('click', copyPng);
@@ -2456,6 +2687,7 @@ zoomInBtn.addEventListener('click', () => setPreviewScale(previewScale + 0.1));
 zoomResetBtn.addEventListener('click', () => setPreviewScale(1));
 jumpErrorBtn.addEventListener('click', jumpToError);
 copySnapshotBtn.addEventListener('click', copySnapshotLink);
+copySnapshotImportBtn.addEventListener('click', copySnapshotImportLink);
 downloadBundleBtn.addEventListener('click', downloadBundle);
 
 aiApiBaseInput.addEventListener('input', persistAiSettingsFromForm);
@@ -2520,6 +2752,7 @@ document.querySelectorAll('[data-action]').forEach((button) => {
   const action = button.dataset.action;
   if (action === 'export-svg') button.addEventListener('click', exportSvg);
   if (action === 'export-png') button.addEventListener('click', exportPng);
+  if (action === 'export-pdf') button.addEventListener('click', exportPdf);
   if (action === 'copy-svg') button.addEventListener('click', copySvg);
   if (action === 'copy-png') button.addEventListener('click', copyPng);
 });
@@ -2563,6 +2796,10 @@ exportTransparentToggle.addEventListener('change', persistExportPrefs);
 exportSvgScaleSelect.addEventListener('change', persistExportPrefs);
 exportSvgInlineToggle.addEventListener('change', persistExportPrefs);
 exportSvgMinifyToggle.addEventListener('change', persistExportPrefs);
+pdfPageSelect.addEventListener('change', persistExportPrefs);
+pdfOrientationSelect.addEventListener('change', persistExportPrefs);
+pdfMarginSelect.addEventListener('change', persistExportPrefs);
+pdfWhiteBgToggle.addEventListener('change', persistExportPrefs);
 exportPresetSelect.addEventListener('change', () => {
   if (exportPresetSelect.value === 'default') {
     const rawPrefs = localStorage.getItem(EXPORT_PREFS_KEY);
@@ -2603,6 +2840,7 @@ clearDraftBtn.addEventListener('click', () => {
 });
 
 copyLink.addEventListener('click', copyShareLink);
+copyLinkNewTab.addEventListener('click', copyShareLinkNewTab);
 
 themeToggle.addEventListener('click', () => {
   const next = !document.body.classList.contains('theme-dark');
@@ -2633,6 +2871,28 @@ helpBtn.addEventListener('click', openShortcuts);
 shortcutsClose.addEventListener('click', closeShortcuts);
 shortcutsDialog.addEventListener('close', () => {
   (lastFocusedBeforeDialog || helpBtn).focus();
+});
+
+importUrlClose.addEventListener('click', () => settleImportUrlDialog(null));
+importUrlCancel.addEventListener('click', () => settleImportUrlDialog(null));
+importUrlSubmit.addEventListener('click', () => settleImportUrlDialog(importUrlInputEl.value));
+importUrlInputEl.addEventListener('keydown', (event) => {
+  const isCmd = event.metaKey || event.ctrlKey;
+  if (isCmd && event.key === 'Enter') {
+    event.preventDefault();
+    settleImportUrlDialog(importUrlInputEl.value);
+  }
+});
+importUrlDialog.addEventListener('cancel', (event) => {
+  event.preventDefault();
+  settleImportUrlDialog(null);
+});
+importUrlDialog.addEventListener('close', () => {
+  if (!importUrlResolver) return;
+  const resolve = importUrlResolver;
+  importUrlResolver = null;
+  resolve(null);
+  (lastFocusedBeforeImportDialog || importUrlBtn).focus();
 });
 
 window.addEventListener('keydown', (event) => {

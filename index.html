@@ -19,6 +19,9 @@
           <button id="help" class="ghost" type="button">Shortcuts</button>
           <button id="theme-toggle" class="ghost" type="button">Toggle theme</button>
           <button id="copy-link" type="button">Copy share link</button>
+          <button id="copy-link-newtab" class="ghost" type="button" title="Adds ?tab=new so opening the link imports into a new diagram tab.">
+            Copy link (new tab)
+          </button>
         </div>
         <div id="readonly-banner" class="banner" hidden>Read-only snapshot</div>
       </header>
@@ -59,6 +62,9 @@
           </label>
           <div class="toolbar">
             <button id="copy-snapshot" type="button">Copy snapshot link</button>
+            <button id="copy-snapshot-import" class="ghost" type="button" title="Creates an importable snapshot that opens as a new tab (not read-only).">
+              Copy snapshot (import)
+            </button>
             <button id="download-bundle" class="ghost" type="button">Download bundle</button>
           </div>
         </div>
@@ -84,6 +90,8 @@
             <button id="commit" type="button">Commit snapshot</button>
             <button id="export-svg" class="ghost" type="button">Export SVG</button>
             <button id="export-png" class="ghost" type="button">Export PNG</button>
+            <button id="export-pdf" class="ghost" type="button">Export PDF</button>
+            <button id="format-mermaid" class="ghost" type="button">Format Mermaid</button>
             <button id="copy-source" class="ghost" type="button">Copy Mermaid</button>
             <button id="copy-svg" class="ghost" type="button">Copy SVG</button>
             <button id="copy-png" class="ghost" type="button">Copy PNG</button>
@@ -120,6 +128,7 @@
             <div class="toolbar">
               <button data-action="export-svg" class="ghost" type="button">Export SVG</button>
               <button data-action="export-png" class="ghost" type="button">Export PNG</button>
+              <button data-action="export-pdf" class="ghost" type="button">Export PDF</button>
               <button data-action="copy-svg" class="ghost" type="button">Copy SVG</button>
               <button data-action="copy-png" class="ghost" type="button">Copy PNG</button>
             </div>
@@ -287,6 +296,34 @@
                 <input id="export-svg-minify" type="checkbox" />
                 <span>Minify SVG</span>
               </label>
+              <label class="field">
+                <span>PDF page</span>
+                <select id="pdf-page">
+                  <option value="auto">Auto</option>
+                  <option value="letter">Letter</option>
+                  <option value="a4">A4</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>PDF orientation</span>
+                <select id="pdf-orientation">
+                  <option value="auto">Auto</option>
+                  <option value="portrait">Portrait</option>
+                  <option value="landscape">Landscape</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>PDF margin</span>
+                <select id="pdf-margin">
+                  <option value="6">Small (6mm)</option>
+                  <option value="12">Medium (12mm)</option>
+                  <option value="18">Large (18mm)</option>
+                </select>
+              </label>
+              <label class="field checkbox">
+                <input id="pdf-white-bg" type="checkbox" />
+                <span>White PDF background</span>
+              </label>
             </div>
             <div class="export-history">
               <div class="label">Recent exports</div>
@@ -331,6 +368,23 @@
           <span>Exit focus mode</span>
         </div>
         <p class="hint">Shortcuts work from anywhere; Ctrl/Cmd + S overrides the browser save dialog.</p>
+      </div>
+    </dialog>
+
+    <dialog id="import-url-dialog" class="dialog" aria-labelledby="import-url-title">
+      <div class="dialog-head">
+        <h2 id="import-url-title">Import from URL</h2>
+        <button id="import-url-close" class="ghost" type="button">Close</button>
+      </div>
+      <div class="dialog-body">
+        <p class="hint">Paste a URL to a Mermaid file, or paste a share link/hash from this app.</p>
+        <label class="label" for="import-url-input">URL or share link</label>
+        <textarea id="import-url-input" placeholder="https://example.com/diagram.mmd or #snap:..." rows="4"></textarea>
+        <div class="toolbar">
+          <button id="import-url-submit" type="button">Import as new tab</button>
+          <button id="import-url-cancel" class="ghost" type="button">Cancel</button>
+        </div>
+        <p class="hint">Tip: some hosts block cross-origin fetches; in that case, download the file and use “Import Mermaid file”.</p>
       </div>
     </dialog>
 
