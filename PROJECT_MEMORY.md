@@ -45,3 +45,39 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Confidence: high
 - Trust label: unit-tested
 
+### 2026-02-09: Default Mermaid To Strict Security + Lock Secure Keys
+- Decision: Initialize Mermaid with `securityLevel: "strict"` and lock secure config keys so inline init directives cannot weaken defaults.
+- Why: This app renders pasted/share-linked content; a strict baseline reduces XSS risk and keeps site-level security consistent.
+- Evidence: `src/lib/mermaid-loader.js`, `tests/mermaid-loader.test.js`; `make check` pass.
+- Commit: `c6dcede`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Persist Preview Zoom + Space-Drag Pan
+- Decision: Persist preview zoom via localStorage and add space-drag panning on the preview surface.
+- Why: Large diagrams are otherwise frustrating to navigate; these controls are common parity features in diagram editors.
+- Evidence: `src/main.js`, `src/styles.css`, `index.html`; local preview smoke + `curl` checks.
+- Commit: `5c300e3`
+- Confidence: medium
+- Trust label: local verification
+
+### 2026-02-09: Import Mermaid Files Into A New Tab
+- Decision: Add file import for `.mmd`/`.md`/`.txt`, creating a new tab with size limits and filename-based titles.
+- Why: Import is a core workflow for Mermaid editors; “new tab” avoids destructive overwrites and pairs well with the existing tab UX.
+- Evidence: `src/main.js`, `index.html`, `tests/dom-ids.test.js`; `make check` pass.
+- Commit: `b4dae83`
+- Confidence: high
+- Trust label: local verification
+
+## Mistakes And Fixes
+
+### 2026-02-09: Missing JSDoc Type For New Helper Caused `tsc --noEmit` Failure
+- Mistake: Added `isTypingElement(target)` without a JSDoc `@param` type, triggering `checkJs` implicit-`any` errors.
+- Root cause: TypeScript `checkJs` requires explicit JSDoc typing for new untyped parameters in strict mode.
+- Fix: Added `/** @param {unknown} target */` in `src/main.js`.
+- Prevention rule: Run `make check` before every push (already policy); keep new helpers JSDoc-typed by default.
+
+## Verification Evidence (2026-02-09)
+- `make check` -> pass
+- `npm run preview -- --host 127.0.0.1 --port 4173` -> pass
+- `curl -fsSL http://127.0.0.1:4173/ | rg -n "AI patch studio|Starter templates|import-file-btn|download-export-history|shortcuts-dialog"` -> pass

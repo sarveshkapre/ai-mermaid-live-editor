@@ -7,10 +7,6 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P0 (Selected): Track the repo operating contract in root `AGENTS.md` (ensure it is versioned and current).
-- [ ] P1 (Selected): Security hardening: set Mermaid `securityLevel: "strict"` and lock secure config keys to prevent malicious graph directives from overriding defaults.
-- [ ] P1 (Selected): UX parity: space-drag pan in preview + persist zoom between reloads.
-- [ ] P2 (Selected): Import Mermaid from file (`.mmd`/`.md`/`.txt`) into a new tab (safe size limits + filename-based tab title).
 - [ ] P1: Integrate a real OpenAI-compatible patch generation flow (provider settings, safe request/response parsing, strict output format).
 - [ ] P2: Add browser-level smoke automation (Playwright) for render + patch apply + tab lifecycle.
 - [ ] P2: Add import from URL (hash/query param) with validation and optional “open as new tab”.
@@ -19,6 +15,18 @@
 - [ ] P3: Add a lightweight presentation mode (full-screen with step-through snapshots).
 
 ## Implemented
+- [x] (2026-02-09) P0 repo contract: tracked the root `AGENTS.md` operating contract and refreshed the prioritized feature backlog.
+  - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`.
+  - Commit: `023de7b`
+- [x] (2026-02-09) P1 security: hardened Mermaid initialization with explicit `securityLevel: "strict"` and locked secure keys to prevent directive overrides.
+  - Evidence: `src/lib/mermaid-loader.js`, `tests/mermaid-loader.test.js`, `make check`.
+  - Commit: `c6dcede`
+- [x] (2026-02-09) P1 UX parity: persisted preview zoom and added space-drag pan for large diagrams.
+  - Evidence: `src/main.js`, `src/styles.css`, `index.html`, `README.md`.
+  - Commit: `5c300e3`
+- [x] (2026-02-09) P2 import: added import-from-file into a new diagram tab with size limits and filename-based tab titles.
+  - Evidence: `src/main.js`, `index.html`, `tests/dom-ids.test.js`.
+  - Commit: `b4dae83`
 - [x] (2026-02-08) P0 CI unblock: fixed strict JS typecheck failures in `src/main.js` by adding explicit JSDoc typing and safe payload normalization.
   - Evidence: `src/main.js`, `npm run typecheck`, `make check`.
 - [x] (2026-02-08) P1 reliability: hardened tab persistence with sanitized localStorage state and active-tab recovery.
@@ -44,6 +52,9 @@
 - Blocking invalid Mermaid proposals before apply avoids accidental overwrite of valid diagrams and improves trust in AI patch flow.
 - Mermaid is now split into a separate `mermaid.core-*.js` chunk, keeping the initial `index-*.js` small for faster first paint.
 - `renderMermaid()` is async; adding a monotonic render sequence prevents older renders from overwriting newer edits.
+- Defaulting Mermaid to strict security mode reduces risk from pasted/share-linked diagrams; locking secure keys prevents inline init directives from weakening defaults.
+- Preview UX parity: space-drag pan helps navigate large diagrams without fighting scrollbars; zoom now persists via localStorage.
+- File import is safest when it creates a new tab (non-destructive) and enforces a size limit to avoid hangs.
 
 ## Market Scan Notes (2026-02-09)
 - Baseline expectations for Mermaid editors in the wild include: URL sharing, export to PNG/SVG (often PDF too), themes, autosave/recovery, and (in some products) collaboration/comments/presentations. Sources:
@@ -57,6 +68,7 @@
 - `npm run build` -> pass (Mermaid split into `mermaid.core-*.js`, initial `index-*.js` ~37 kB)
 - GitHub Actions: `gh run watch 21811569637 --exit-status` -> success
 - Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`AI patch studio`, `Starter templates`, `download-export-history`) -> pass
+- Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`import-file-btn`, `import-file`, `shortcuts-dialog`) -> pass
 
 ## Notes
 - This file is maintained by the autonomous clone loop.
