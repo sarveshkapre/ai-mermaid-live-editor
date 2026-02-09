@@ -110,6 +110,38 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Confidence: medium
 - Trust label: local verification
 
+### 2026-02-09: Add PDF Export Via Browser Print
+- Decision: Export diagrams as PDF by opening a print-friendly window and invoking `window.print()` (users save to PDF), with lightweight page/margin/background controls.
+- Why: PDF export is parity for Mermaid editors; using print keeps dependencies low and works offline without server-side rendering.
+- Evidence: `index.html`, `src/main.js`; `make check` pass; `make smoke` pass.
+- Commit: `b452332`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Share Links That Import Into A New Tab + Clean URLs
+- Decision: Add explicit “Copy link (new tab)” and “Copy snapshot (import)” actions and clear one-shot import/read-only URL flags after importing.
+- Why: Opening share links should not destructively overwrite the active tab; cleaning URL params avoids confusing reload behavior.
+- Evidence: `index.html`, `src/main.js`, `README.md`; `make check` pass.
+- Commit: `b452332`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Replace `prompt()` URL Import With A Modal Dialog
+- Decision: Use an in-app `<dialog>` for “Import from URL” instead of `window.prompt()`.
+- Why: `prompt()` is brittle and inconsistent across browsers; a modal improves UX and supports better copy/paste flows.
+- Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`; `make check` pass.
+- Commit: `b452332`
+- Confidence: high
+- Trust label: local verification
+
+### 2026-02-09: Add “Format Mermaid” (Safe Whitespace Normalization) With Diff Preview
+- Decision: Provide a low-risk formatter that stages output into Patch proposal so users can review the diff before applying.
+- Why: A “format” button is expected parity; non-destructive preview reduces risk of breaking diagrams.
+- Evidence: `index.html`, `src/main.js`; `make check` pass.
+- Commit: `b452332`
+- Confidence: medium
+- Trust label: local verification
+
 ## Mistakes And Fixes
 
 ### 2026-02-09: Missing JSDoc Type For New Helper Caused `tsc --noEmit` Failure
@@ -179,3 +211,8 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - `make smoke` -> pass
 - `gh run watch 21824678395 --exit-status` -> success
 - `gh run watch 21824700846 --exit-status` -> success
+
+## Verification Evidence (2026-02-09 cycle 4)
+- `make check` -> pass
+- `make smoke` -> pass
+- `gh run watch 21832982062 --exit-status` -> success

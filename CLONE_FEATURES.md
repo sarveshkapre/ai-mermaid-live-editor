@@ -7,10 +7,6 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P2: Add PDF export (print-friendly output + consistent sizing).
-- [ ] P2: Add “format Mermaid” action (safe whitespace normalization) with a non-destructive preview.
-- [ ] P2: Improve share-link UX for multi-tab workflows (explicit “open in new tab” copy option; keep current tab intact).
-- [ ] P2: Replace `prompt()`-based “Import from URL” with a small modal dialog (better UX + less brittle).
 - [ ] P3: Add a lightweight presentation mode (full-screen with step-through snapshots).
 - [ ] P3: Add AI streaming output (progressively fill proposal) and surface token/cost metadata when available.
 - [ ] P3: Add diagram linting helpers (detect common Mermaid mistakes + quick fixes).
@@ -36,6 +32,18 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 | Playwright browser smoke automation | 3 | 3 | 4 | 2 | 2 | 3 |
 
 ## Implemented
+- [x] (2026-02-09) P2 export: added PDF export via browser print (save as PDF) with page/margin/background settings.
+  - Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`, `make check`, `make smoke`.
+  - Commit: `b452332`
+- [x] (2026-02-09) P2 share/import UX: added “Copy link (new tab)” and an importable snapshot link; cleaned up `?tab=new` / readonly params after import.
+  - Evidence: `index.html`, `src/main.js`, `README.md`, `docs/ROADMAP.md`, `make check`.
+  - Commit: `b452332`
+- [x] (2026-02-09) P2 import UX: replaced `prompt()`-based import-from-URL with a modal dialog (better UX + fewer browser quirks).
+  - Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`.
+  - Commit: `b452332`
+- [x] (2026-02-09) P2 format: added “Format Mermaid” (safe whitespace normalization) staged into Patch proposal for non-destructive diff preview.
+  - Evidence: `index.html`, `src/main.js`, `README.md`.
+  - Commit: `b452332`
 - [x] (2026-02-09) P0 repo contract: tracked the root `AGENTS.md` operating contract and refreshed the prioritized feature backlog.
   - Evidence: `AGENTS.md`, `CLONE_FEATURES.md`.
   - Commit: `023de7b`
@@ -93,6 +101,8 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - File import is safest when it creates a new tab (non-destructive) and enforces a size limit to avoid hangs.
 - Import-from-URL is useful parity: it reduces friction to move diagrams between tools, repos, and chat threads.
 - A dedicated browser smoke script catches DOM-wiring regressions that unit tests miss (render/pan/patch/tab flows).
+- Using `?tab=new` / `?import=1` as one-shot import flags is best when the app clears them after import, keeping URLs clean and editable.
+- Modal dialogs are a better UX than `prompt()` for import flows and avoid browser-specific `prompt()` behavior differences.
 
 ## Market Scan Notes (2026-02-09)
 - Baseline expectations for Mermaid editors in the wild include: URL sharing, export to PNG/SVG (often PDF too), themes, autosave/recovery, and (in some products) collaboration/comments/presentations. Sources:
@@ -106,6 +116,7 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - `make check` -> pass (lint, typecheck, tests, build, audit)
 - `npm run test` -> pass (8 files, 23 tests)
 - `make smoke` -> pass (Playwright UI flow)
+- GitHub Actions: `gh run watch 21832982062 --exit-status` -> success
 - GitHub Actions: `gh run watch 21817195219 --exit-status` -> success
 - GitHub Actions: `gh run watch 21817255094 --exit-status` -> success
 - Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`generate-patch`, `ai-api-base`, `undo-patch`) -> pass
