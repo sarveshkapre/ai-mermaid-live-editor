@@ -29,4 +29,5 @@
 - UX: PDF export (print / save as PDF) with sizing settings
 - UX: “Format Mermaid” action (safe whitespace normalization) with diff preview
 - AI: generation controls (temperature/max tokens/timeout) + cancel
+- AI: streaming patch output (OpenAI-compatible SSE) with progressive proposal fill + usage metadata when available
 - DX: optional Playwright browser smoke check (`make smoke`)

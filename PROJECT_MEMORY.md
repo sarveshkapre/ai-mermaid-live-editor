@@ -150,6 +150,14 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Confidence: medium
 - Trust label: local verification
 
+### 2026-02-10: Stream AI Patch Output (SSE) + Usage Metadata (When Available)
+- Decision: Prefer OpenAI-compatible SSE streaming (`stream: true`) for AI patch generation to progressively fill the proposal textarea; capture and display usage metadata when providers include it; automatically fall back to non-streaming when endpoints reject streaming parameters.
+- Why: Progressive fill reduces perceived latency for long patches and makes failures/cancellations less opaque; fallback preserves compatibility with “OpenAI-compatible” providers that don't implement streaming.
+- Evidence: `make check` pass; `make smoke` pass; proxy streaming pass-through smoke (`chunks=3`) pass; CI run `21859598842` success.
+- Commit: `c10638e`
+- Confidence: medium
+- Trust label: local verification
+
 ## Mistakes And Fixes
 
 ### 2026-02-09: Smoke Test Waited For Closed Dialog To Become Visible
@@ -233,3 +241,30 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - `make smoke` -> pass
 - `gh run watch 21832982062 --exit-status` -> success
 - `gh run watch 21833013633 --exit-status` -> success
+
+## Verification Evidence (2026-02-10 cycle 1)
+- `make check` -> pass
+- `make smoke` -> pass
+- Proxy streaming pass-through smoke (stub upstream + proxy + fetch stream) -> pass (`chunks=3`)
+  Command:
+  ```bash
+  node --input-type=module -e 'import http from "node:http";
+    const server = http.createServer((req,res)=>{
+      if (req.method==="POST" && req.url==="/v1/chat/completions") {
+        res.writeHead(200, {"Content-Type":"text/event-stream","Cache-Control":"no-cache","Connection":"keep-alive"});
+        res.write(`data: ${JSON.stringify({choices:[{delta:{content:"flowchart TD\\n"}}]})}\\n\\n`);
+        setTimeout(()=>res.write(`data: ${JSON.stringify({choices:[{delta:{content:"  a-->b\\n"}}]})}\\n\\n`),50);
+        setTimeout(()=>{res.write(`data: ${JSON.stringify({choices:[{delta:{}}],usage:{prompt_tokens:1,completion_tokens:2,total_tokens:3}})}\\n\\n`);res.write("data: [DONE]\\n\\n");res.end();},100);
+        return;
+      }
+      res.statusCode = 404; res.end("not found");
+    });
+    server.listen(9998,"127.0.0.1",()=>console.log("stub up"));
+    setInterval(()=>{},1000);' >/tmp/ai-mermaid-stub-stream.log 2>&1 & echo $! > /tmp/ai-mermaid-stub-stream.pid
+  PORT=8790 AI_PROXY_TARGET_ORIGIN=http://127.0.0.1:9998 node scripts/ai-proxy.mjs >/tmp/ai-mermaid-proxy-stream.log 2>&1 & echo $! > /tmp/ai-mermaid-proxy-stream.pid
+  sleep 0.4
+  node --input-type=module -e 'const res = await fetch("http://127.0.0.1:8790/v1/chat/completions",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    let chunks=0; for await (const _ of res.body) chunks+=1; console.log(`chunks=${chunks}`); if (chunks<2) process.exit(3);'
+  kill $(cat /tmp/ai-mermaid-proxy-stream.pid) $(cat /tmp/ai-mermaid-stub-stream.pid)
+  ```
+- GitHub Actions: `gh run watch 21859598842 --exit-status` -> success

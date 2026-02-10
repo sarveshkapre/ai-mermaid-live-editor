@@ -1,9 +1,10 @@
 # ROADMAP
 
 ## Near-term
-- AI streaming patch output (progressively fill proposal) + usage metadata when available.
+- Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
 
 ## Shipped
+- AI streaming patch output (progressively fill proposal) + usage metadata when available. (2026-02-10)
 - Presentation mode (full-screen + step-through snapshots) (2026-02-09)
 - PDF export (print-friendly sizing) (2026-02-09)
 - Format Mermaid (non-destructive preview) (2026-02-09)

@@ -7,12 +7,21 @@
 - Quick code review sweep in `src/main.js` and `src/lib/*`
 
 ## Candidate Features To Do
-- [ ] P3: AI streaming output (progressively fill proposal) for OpenAI-compatible SSE.
-- [ ] P3: Surface AI token/usage metadata when providers return it (Responses/Chat Completions).
 - [ ] P3: Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
 - [ ] P3: User template gallery (save personal templates + import/export).
 - [ ] P3: Diff performance: consider Myers/patience diff fallback for large edits (keep current limits).
 - [ ] P3: Multi-diagram workspace: tags + search across tabs/history.
+
+## Cycle 1 Prioritization (2026-02-10)
+Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
+
+| Task (selected) | Impact | Effort | Strategic fit | Differentiation | Risk | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| AI streaming patch output + safe fallback | 5 | 3 | 5 | 4 | 3 | 3 |
+| Proxy streaming pass-through | 4 | 2 | 5 | 2 | 2 | 4 |
+| Usage metadata surfacing | 3 | 2 | 4 | 2 | 2 | 3 |
+| SSE/unit test coverage for streaming | 3 | 2 | 4 | 1 | 2 | 4 |
+| Docs + memory + verification evidence updates | 2 | 1 | 5 | 1 | 1 | 5 |
 
 ## Cycle 5 Prioritization (2026-02-09)
 Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
@@ -43,6 +52,9 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 | Playwright browser smoke automation | 3 | 3 | 4 | 2 | 2 | 3 |
 
 ## Implemented
+- [x] (2026-02-10) P1 AI streaming: generate AI patches via OpenAI-compatible SSE (Chat Completions + Responses) with progressive proposal fill, usage metadata display when available, and automatic fallback to non-streaming when `stream: true` is rejected; updated local proxy to pass through streaming responses.
+  - Evidence: `src/main.js`, `src/lib/sse.js`, `src/lib/ai-stream.js`, `index.html`, `scripts/ai-proxy.mjs`, `tests/sse.test.js`, `tests/ai-stream.test.js`, `tests/dom-ids.test.js`, `make check`, `make smoke`.
+  - Commit: `c10638e`
 - [x] (2026-02-09) P1 presentation: added a lightweight full-screen presentation mode to step through snapshots (timeline + keyboard `P`), plus per-snapshot “Present” actions and a fullscreen toggle.
   - Evidence: `index.html`, `src/main.js`, `src/styles.css`, `tests/dom-ids.test.js`, `scripts/smoke-browser.mjs`, `README.md`, `docs/ROADMAP.md`, `CHANGELOG.md`, `make check`, `make smoke`.
   - Commit: `eb3e3e6`
@@ -132,6 +144,13 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
   - Online Mermaid Viewer markets export SVG/PNG + URL share + pan + fullscreen link. (source: `https://mermaid-viewer.com/`)
   - Mermaid Visualizer includes share/save/load + PNG/PDF export settings. (source: `https://viewmermaid.com/`)
 
+## Market Scan Notes (2026-02-10 cycle 1 refresh)
+- Several Mermaid editors/tools now explicitly market AI-powered diagram creation and multi-model support, reinforcing “generate + iterate” as a baseline expectation for modern diagramming UX. Sources:
+  - Mermaid Chart: AI diagram creation landing page. (source: `https://www.mermaidchart.com/ai-diagram`)
+  - Mermaid Chart docs: “Mermaid Chart AI” overview. (source: `https://docs.mermaidchart.com/mermaid-chart-ai/overview`)
+- OpenAI-compatible providers commonly expose streaming via `text/event-stream` (SSE); progressive fill reduces perceived latency and improves trust in long outputs. Sources:
+  - OpenAI API docs: streaming guide. (source: `https://platform.openai.com/docs/guides/streaming`)
+
 ## Gap Map (2026-02-09 cycle 5)
 - Missing: AI streaming output + usage metadata; user template library (save/import/export); diagram lint quick-fixes; collaboration.
 - Weak: Diff scalability for large edits; presentation polish (speaker notes, click-to-advance hotspots, stable “fit to viewport” toggle).
@@ -147,6 +166,18 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - GitHub Actions: `gh run watch 21817195219 --exit-status` -> success
 - GitHub Actions: `gh run watch 21817255094 --exit-status` -> success
 - Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173` + `curl` content checks (`generate-patch`, `ai-api-base`, `undo-patch`) -> pass
+
+## Gap Map (2026-02-10 cycle 1)
+- Missing: diagram lint quick-fixes; user template library (save/import/export); collaboration.
+- Weak: Diff scalability for large edits; presentation polish (speaker notes, click-to-advance hotspots, stable “fit to viewport” toggle).
+- Parity: Share links, export PNG/SVG/PDF, zoom/pan, autosave, import-from-file/URL, AI patch generation.
+- Differentiator: Patch-first AI workflow (proposal textarea + diff preview + validation + one-click undo), plus progressive streaming patch output.
+
+## Verification Evidence (2026-02-10)
+- `make check` -> pass
+- `make smoke` -> pass
+- Local proxy streaming pass-through smoke (stub upstream + proxy + fetch stream) -> pass (`chunks=3`)
+- GitHub Actions: `gh run watch 21859598842 --exit-status` -> success
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

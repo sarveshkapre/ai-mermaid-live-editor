@@ -14,6 +14,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Presentation mode (step through snapshots full-screen)
 - Auto restore point saved before patch apply
 - OpenAI-compatible patch generation (optional; bring your own provider/proxy)
+- AI streaming patch output (when supported) + usage metadata when available
 - AI generation controls (temperature/max tokens/timeout) + cancel
 - Shareable links (URL hash)
 - Share links that import into a new tab (copy link with `?tab=new`)
