@@ -3,8 +3,10 @@ import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
 import { buildPatchMessages, extractMermaidFromText, extractTextFromProviderResponse } from './lib/ai-patch.js';
+import { extractChatDelta, extractResponsesDelta, extractUsage } from './lib/ai-stream.js';
 import { errorToMessage, extractMermaidErrorLine } from './lib/mermaid-error.js';
 import { loadMermaid } from './lib/mermaid-loader.js';
+import { createSseParser } from './lib/sse.js';
 import { normalizeTabsState } from './lib/tabs.js';
 
 const DEFAULT_DIAGRAM = `flowchart TD
@@ -269,6 +271,8 @@ const aiApiKeyInput = byId('ai-api-key');
 const aiRememberKeyToggle = byId('ai-remember-key');
 /** @type {HTMLDivElement} */
 const aiStatus = byId('ai-status');
+/** @type {HTMLDivElement} */
+const aiUsage = byId('ai-usage');
 /** @type {HTMLButtonElement} */
 const cancelGeneratePatchBtn = byId('cancel-generate-patch');
 /** @type {HTMLDivElement} */
@@ -701,6 +705,45 @@ function saveAiKey(apiKey, remember) {
  */
 function setAiStatus(message) {
   aiStatus.textContent = message;
+}
+
+/**
+ * @param {unknown | null} usage
+ */
+function setAiUsage(usage) {
+  if (!usage) {
+    aiUsage.textContent = '';
+    return;
+  }
+  if (!usage || typeof usage !== 'object') {
+    aiUsage.textContent = '';
+    return;
+  }
+  const u = /** @type {Record<string, unknown>} */ (usage);
+  const promptTokens = typeof u.prompt_tokens === 'number' ? u.prompt_tokens : null;
+  const completionTokens = typeof u.completion_tokens === 'number' ? u.completion_tokens : null;
+  const totalTokens = typeof u.total_tokens === 'number' ? u.total_tokens : null;
+  const inputTokens = typeof u.input_tokens === 'number' ? u.input_tokens : null;
+  const outputTokens = typeof u.output_tokens === 'number' ? u.output_tokens : null;
+  const total =
+    typeof totalTokens === 'number'
+      ? totalTokens
+      : typeof u.total === 'number'
+        ? /** @type {number} */ (u.total)
+        : inputTokens !== null && outputTokens !== null
+          ? inputTokens + outputTokens
+          : promptTokens !== null && completionTokens !== null
+            ? promptTokens + completionTokens
+            : null;
+
+  const inTok = inputTokens !== null ? inputTokens : promptTokens;
+  const outTok = outputTokens !== null ? outputTokens : completionTokens;
+  const parts = [];
+  if (typeof inTok === 'number') parts.push(`in ${inTok}`);
+  if (typeof outTok === 'number') parts.push(`out ${outTok}`);
+  if (typeof total === 'number') parts.push(`total ${total}`);
+
+  aiUsage.textContent = parts.length ? `Usage: ${parts.join(' / ')} tokens` : 'Usage metadata received.';
 }
 
 /**
@@ -1536,6 +1579,8 @@ async function generatePatch() {
   generatePatchBtn.disabled = true;
   cancelGeneratePatchBtn.disabled = false;
   setAiStatus('Generating patch…');
+  setAiUsage(null);
+  proposal.readOnly = true;
 
   const { system, user } = buildPatchMessages({
     tabTitle: getActiveTab()?.title || 'Diagram',
@@ -1548,9 +1593,12 @@ async function generatePatch() {
   aiRequestController = controller;
   aiRequestTimeout = window.setTimeout(() => controller.abort(), Math.max(5, settings.timeoutSec || 45) * 1000);
 
-  try {
-    const url =
-      mode === 'responses' ? `${apiBase}/responses` : `${apiBase}/chat/completions`;
+  /**
+   * @param {{stream: boolean}} opts
+   * @returns {Promise<{text: string, usage: unknown | null, streamed: boolean}>}
+   */
+  async function requestAiPatch(opts) {
+    const url = mode === 'responses' ? `${apiBase}/responses` : `${apiBase}/chat/completions`;
     const headers = {
       'Content-Type': 'application/json',
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
@@ -1559,6 +1607,11 @@ async function generatePatch() {
       typeof settings.temperature === 'number' && Number.isFinite(settings.temperature)
         ? { temperature: settings.temperature }
         : {};
+    const maybeMaxTokens =
+      typeof settings.maxTokens === 'number' && Number.isFinite(settings.maxTokens) && settings.maxTokens > 0
+        ? { maxTokens: Math.floor(settings.maxTokens) }
+        : { maxTokens: null };
+
     const body =
       mode === 'responses'
         ? {
@@ -1567,10 +1620,9 @@ async function generatePatch() {
             input: user,
             text: { format: { type: 'text' } },
             store: false,
-            ...(typeof settings.maxTokens === 'number' && Number.isFinite(settings.maxTokens) && settings.maxTokens > 0
-              ? { max_output_tokens: Math.floor(settings.maxTokens) }
-              : {}),
+            ...(maybeMaxTokens.maxTokens ? { max_output_tokens: maybeMaxTokens.maxTokens } : {}),
             ...maybeTemperature,
+            ...(opts.stream ? { stream: true } : {}),
           }
         : {
             model,
@@ -1578,10 +1630,9 @@ async function generatePatch() {
               { role: 'system', content: system },
               { role: 'user', content: user },
             ],
-            ...(typeof settings.maxTokens === 'number' && Number.isFinite(settings.maxTokens) && settings.maxTokens > 0
-              ? { max_tokens: Math.floor(settings.maxTokens) }
-              : {}),
+            ...(maybeMaxTokens.maxTokens ? { max_tokens: maybeMaxTokens.maxTokens } : {}),
             ...maybeTemperature,
+            ...(opts.stream ? { stream: true } : {}),
           };
 
     const res = await fetch(url, {
@@ -1591,8 +1642,11 @@ async function generatePatch() {
       signal: controller.signal,
     });
 
-    const json = await res.json().catch(() => null);
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+
     if (!res.ok) {
+      // Try JSON first, but keep a safe fallback for text responses.
+      const json = await res.json().catch(() => null);
       const message =
         json && typeof json === 'object'
           ? /** @type {any} */ (json)?.error?.message || `HTTP ${res.status}`
@@ -1600,17 +1654,138 @@ async function generatePatch() {
       throw new Error(String(message));
     }
 
+    if (opts.stream && contentType.includes('text/event-stream') && res.body) {
+      let acc = '';
+      /** @type {unknown | null} */
+      let usage = null;
+      let sawDone = false;
+      /** @type {Error | null} */
+      let streamError = null;
+
+      let pendingText = '';
+      /** @type {number | null} */
+      let uiTimer = null;
+      let lastDiffAt = 0;
+
+      function scheduleUi() {
+        pendingText = acc;
+        if (uiTimer) return;
+        uiTimer = window.setTimeout(() => {
+          uiTimer = null;
+          proposal.value = pendingText;
+          const now = Date.now();
+          if (now - lastDiffAt > 250) {
+            lastDiffAt = now;
+            updateDiff();
+          }
+        }, 80);
+      }
+
+      const parser = createSseParser((msg) => {
+        if (streamError) return;
+        const data = msg.data.trim();
+        if (!data) return;
+        if (data === '[DONE]') {
+          sawDone = true;
+          return;
+        }
+        let parsed = null;
+        try {
+          parsed = JSON.parse(data);
+        } catch {
+          return;
+        }
+
+        if (parsed && typeof parsed === 'object') {
+          const err = /** @type {any} */ (parsed)?.error;
+          if (err && typeof err === 'object' && typeof err.message === 'string') {
+            streamError = new Error(String(err.message));
+            sawDone = true;
+            return;
+          }
+        }
+
+        const nextUsage = extractUsage(parsed);
+        if (nextUsage) {
+          usage = nextUsage;
+          setAiUsage(usage);
+        }
+
+        const delta = mode === 'responses' ? extractResponsesDelta(parsed) : extractChatDelta(parsed);
+        if (typeof delta === 'string' && delta) {
+          acc += delta;
+          setAiStatus(`Streaming… (${Math.max(1, acc.length)} chars)`);
+          scheduleUi();
+        }
+      });
+
+      const decoder = new TextDecoder();
+      const reader = res.body.getReader();
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          parser.push(decoder.decode(value, { stream: true }));
+          if (streamError) break;
+          if (sawDone) {
+            try {
+              await reader.cancel();
+            } catch {
+              // Ignore cancellation failures.
+            }
+            break;
+          }
+        }
+      } finally {
+        try {
+          parser.push(decoder.decode());
+        } catch {
+          // ignore decoder flush errors
+        }
+        parser.finish();
+        if (uiTimer) {
+          window.clearTimeout(uiTimer);
+          uiTimer = null;
+        }
+        if (pendingText && proposal.value !== pendingText) {
+          proposal.value = pendingText;
+        }
+      }
+
+      if (streamError) throw streamError;
+      return { text: acc.trim(), usage, streamed: true };
+    }
+
+    const json = await res.json().catch(() => null);
     const text = extractTextFromProviderResponse(json, mode);
     if (!text) {
       throw new Error('Provider response did not include text output.');
     }
+    return { text: text.trim(), usage: extractUsage(json), streamed: false };
+  }
 
-    const mermaid = extractMermaidFromText(text);
+  try {
+    // Prefer streaming when supported, but fall back to non-streaming if a provider
+    // rejects `stream: true` (common among "compatible" endpoints).
+    let result = null;
+    try {
+      result = await requestAiPatch({ stream: true });
+    } catch (error) {
+      const message = errorToMessage(error).toLowerCase();
+      const shouldRetry =
+        message.includes('stream') && (message.includes('unknown') || message.includes('unsupported') || message.includes('invalid'));
+      if (!shouldRetry) throw error;
+      setAiStatus('Streaming unsupported; retrying non-streaming…');
+      result = await requestAiPatch({ stream: false });
+    }
+
+    setAiUsage(result.usage);
+    const mermaid = extractMermaidFromText(result.text);
     if (mermaid) {
       proposal.value = mermaid;
-      setAiStatus('Patch generated.');
+      setAiStatus(result.streamed ? 'Patch generated (streamed).' : 'Patch generated.');
     } else {
-      proposal.value = text.trim();
+      proposal.value = result.text.trim();
       setAiStatus('AI output was not recognized as Mermaid. Raw output pasted into proposal.');
     }
 
@@ -1633,6 +1808,7 @@ async function generatePatch() {
     aiRequestController = null;
     cancelGeneratePatchBtn.disabled = true;
     generatePatchBtn.disabled = isReadOnly;
+    proposal.readOnly = false;
   }
 }
 

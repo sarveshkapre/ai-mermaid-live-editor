@@ -31,6 +31,7 @@ describe('index.html wiring', () => {
       'ai-api-key',
       'ai-remember-key',
       'ai-status',
+      'ai-usage',
       'patch-undo',
       'undo-patch',
       'diff',

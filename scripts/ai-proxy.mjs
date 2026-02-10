@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { Readable } from 'node:stream';
 
 const PORT = Number(process.env.PORT) || 8787;
 const HOST = process.env.HOST || '127.0.0.1';
@@ -73,12 +74,24 @@ const server = http.createServer(async (req, res) => {
       const lower = key.toLowerCase();
       if (lower === 'content-encoding') return;
       if (lower === 'transfer-encoding') return;
+      if (lower === 'content-length') return;
       res.setHeader(key, value);
     });
     setCors(res);
 
-    const buf = Buffer.from(await upstream.arrayBuffer());
-    res.end(buf);
+    if (!upstream.body) {
+      const buf = Buffer.from(await upstream.arrayBuffer());
+      res.end(buf);
+      return;
+    }
+
+    // Stream pass-through for SSE / long responses (important for `stream: true`).
+    try {
+      res.flushHeaders?.();
+    } catch {
+      // ignore
+    }
+    Readable.fromWeb(upstream.body).pipe(res);
   } catch (error) {
     res.statusCode = 500;
     setCors(res);
@@ -97,4 +110,3 @@ server.listen(PORT, HOST, () => {
     ].join('\n'),
   );
 });
-
