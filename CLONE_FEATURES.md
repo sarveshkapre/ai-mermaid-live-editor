@@ -75,7 +75,7 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 ## Implemented
 - [x] (2026-02-11) P1 lint assistant: added Mermaid lint helpers for common syntax/paste mistakes (fenced markdown, smart quotes, tab indentation, flowchart single-arrow typos, unclosed `subgraph`) and integrated safe quick-fix staging into Patch proposal with issue surfacing in the editor panel.
   - Evidence: `src/lib/mermaid-lint.js`, `src/main.js`, `index.html`, `src/styles.css`, `tests/mermaid-lint.test.js`, `tests/dom-ids.test.js`, `README.md`, `docs/ROADMAP.md`, `CHANGELOG.md`, `docs/CHANGELOG.md`, `make check`, `make smoke`.
-  - Commit: `(current cycle commit)`
+  - Commit: `fbfba2c`
 - [x] (2026-02-10) P1 AI streaming: generate AI patches via OpenAI-compatible SSE (Chat Completions + Responses) with progressive proposal fill, usage metadata display when available, and automatic fallback to non-streaming when `stream: true` is rejected; updated local proxy to pass through streaming responses.
   - Evidence: `src/main.js`, `src/lib/sse.js`, `src/lib/ai-stream.js`, `index.html`, `scripts/ai-proxy.mjs`, `tests/sse.test.js`, `tests/ai-stream.test.js`, `tests/dom-ids.test.js`, `make check`, `make smoke`.
   - Commit: `c10638e`
@@ -226,6 +226,7 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - `make check` -> pass.
 - `make smoke` -> pass (Playwright browser flow).
 - Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` + `curl -fsSL http://127.0.0.1:4173/ | rg -n "lint-mermaid|lint-stage-fixes|lint-status|lint-issues"` -> pass.
+- GitHub Actions: `gh run watch 21897363082 --exit-status` -> success.
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

@@ -8,7 +8,7 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Decision: Add a lint assistant that detects high-frequency Mermaid mistakes (fenced markdown blocks, smart quotes, tab indentation, flowchart `->` typos, and missing `end` for `subgraph`) and stage fixes into Patch proposal instead of mutating the editor directly.
 - Why: This closes the roadmap’s top missing feature while preserving the product’s patch-first trust model (review diff before apply).
 - Evidence: `src/lib/mermaid-lint.js`, `src/main.js`, `index.html`, `src/styles.css`, `tests/mermaid-lint.test.js`, `tests/dom-ids.test.js`; `make check` pass; `make smoke` pass.
-- Commit: `(current cycle commit)`
+- Commit: `fbfba2c`
 - Confidence: high
 - Trust label: trusted (local code/tests)
 
@@ -294,3 +294,4 @@ Structured, append-only notes for decisions and learnings that should persist ac
 - Local smoke path:
   - `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` -> pass.
   - `curl -fsSL http://127.0.0.1:4173/ | rg -n "lint-mermaid|lint-stage-fixes|lint-status|lint-issues"` -> pass.
+- GitHub Actions: `gh run watch 21897363082 --exit-status` -> success.
