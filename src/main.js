@@ -4,6 +4,7 @@ import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
 import { buildPatchMessages, extractMermaidFromText, extractTextFromProviderResponse } from './lib/ai-patch.js';
 import { extractChatDelta, extractResponsesDelta, extractUsage } from './lib/ai-stream.js';
+import { lintMermaid } from './lib/mermaid-lint.js';
 import { errorToMessage, extractMermaidErrorLine } from './lib/mermaid-error.js';
 import { loadMermaid } from './lib/mermaid-loader.js';
 import { createSseParser } from './lib/sse.js';
@@ -211,6 +212,21 @@ const PROMPT_RECIPES = [
  */
 
 /**
+ * @typedef {{
+ *   id: string,
+ *   severity: 'error' | 'warning',
+ *   title: string,
+ *   message: string,
+ *   line: number | null,
+ *   hasFix: boolean
+ * }} MermaidLintIssue
+ */
+
+/**
+ * @typedef {{issues: MermaidLintIssue[], fixedCode: string, hasFixes: boolean}} MermaidLintResult
+ */
+
+/**
  * @template T
  * @param {string} id
  * @returns {T}
@@ -363,6 +379,14 @@ const copySnapshotImportBtn = byId('copy-snapshot-import');
 const downloadBundleBtn = byId('download-bundle');
 /** @type {HTMLDivElement} */
 const healthEl = byId('health');
+/** @type {HTMLButtonElement} */
+const lintMermaidBtn = byId('lint-mermaid');
+/** @type {HTMLButtonElement} */
+const lintStageFixesBtn = byId('lint-stage-fixes');
+/** @type {HTMLDivElement} */
+const lintStatus = byId('lint-status');
+/** @type {HTMLDivElement} */
+const lintIssues = byId('lint-issues');
 /** @type {HTMLDivElement} */
 const readonlyBanner = byId('readonly-banner');
 
@@ -470,6 +494,8 @@ let tabs = [];
 let lastErrorLine = null;
 /** @type {number} */
 let renderSeq = 0;
+/** @type {MermaidLintResult | null} */
+let lastLintResult = null;
 let isReadOnly = false;
 /** @type {string | null} */
 let lastPatchRestoreId = null;
@@ -1220,6 +1246,56 @@ function updateStats() {
   updateHealth(text);
 }
 
+/**
+ * @param {MermaidLintIssue} issue
+ */
+function lintIssueLabel(issue) {
+  const line = typeof issue.line === 'number' && issue.line > 0 ? `Line ${issue.line}` : 'General';
+  return `${line} · ${issue.severity === 'error' ? 'Error' : 'Warning'}`;
+}
+
+/**
+ * @param {boolean=} showToastSummary
+ */
+function updateLintReport(showToastSummary = false) {
+  const result = lintMermaid(editor.value);
+  lastLintResult = result;
+
+  if (!result.issues.length) {
+    lintStatus.textContent = 'Lint: no common Mermaid issues detected.';
+    lintIssues.innerHTML = '<div class="hint">No findings.</div>';
+    lintStageFixesBtn.disabled = true;
+    if (showToastSummary) {
+      showToast('No lint issues found.');
+    }
+    return;
+  }
+
+  const errorCount = result.issues.filter((issue) => issue.severity === 'error').length;
+  const warningCount = result.issues.length - errorCount;
+  const statusParts = [];
+  if (errorCount) statusParts.push(`${errorCount} error${errorCount === 1 ? '' : 's'}`);
+  if (warningCount) statusParts.push(`${warningCount} warning${warningCount === 1 ? '' : 's'}`);
+  lintStatus.textContent = `Lint: ${statusParts.join(' · ')}.`;
+  lintIssues.innerHTML = result.issues
+    .map((issue) => {
+      const badge = lintIssueLabel(issue);
+      const fixHint = issue.hasFix ? 'Quick fix available.' : 'Manual fix required.';
+      return `<div class="lint-item lint-${issue.severity}">
+  <strong>${escapeHtml(issue.title)}</strong>
+  <div class="hint">${escapeHtml(badge)}</div>
+  <div>${escapeHtml(issue.message)}</div>
+  <div class="hint">${escapeHtml(fixHint)}</div>
+</div>`;
+    })
+    .join('');
+
+  lintStageFixesBtn.disabled = isReadOnly || !result.hasFixes;
+  if (showToastSummary) {
+    showToast(`Lint found ${result.issues.length} issue${result.issues.length === 1 ? '' : 's'}.`);
+  }
+}
+
 function loadPreviewScale() {
   const raw = localStorage.getItem(PREVIEW_SCALE_KEY);
   if (!raw) return 1;
@@ -1335,6 +1411,8 @@ function applyReadOnlyMode() {
     exportPngBtn,
     exportPdfBtn,
     formatMermaidBtn,
+    lintMermaidBtn,
+    lintStageFixesBtn,
     copySourceBtn,
     copySvgBtn,
     copyPngBtn,
@@ -1537,6 +1615,7 @@ function scheduleRender() {
   renderTimer = window.setTimeout(() => {
     renderMermaid();
     updateStats();
+    updateLintReport();
     updateDiff();
     if (!isReadOnly) {
       updateActiveTabFromEditor();
@@ -2111,6 +2190,22 @@ function stageFormattedMermaid() {
   document.getElementById('workspace-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   proposal.focus();
   showToast('Formatted output staged in Patch proposal. Review diff, then Apply patch.');
+}
+
+function stageLintFixes() {
+  if (isReadOnly) return;
+  const result = lastLintResult || lintMermaid(editor.value);
+  lastLintResult = result;
+  if (!result.hasFixes || result.fixedCode === editor.value) {
+    showToast('No safe lint quick fixes available.');
+    return;
+  }
+  proposal.value = result.fixedCode;
+  updateDiff();
+  document.getElementById('workspace-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  proposal.focus();
+  const fixCount = result.issues.filter((issue) => issue.hasFix).length;
+  showToast(`Staged ${fixCount} lint quick fix${fixCount === 1 ? '' : 'es'} in Patch proposal.`);
 }
 
 function exportSvg() {
@@ -2840,6 +2935,7 @@ function init() {
   }
 
   updateStats();
+  updateLintReport();
   renderMermaid();
   renderTimeline();
   updateDiff();
@@ -2868,6 +2964,8 @@ projectPurposeInput.addEventListener('input', persistProject);
 useFilenamesToggle.addEventListener('change', persistProject);
 
 commitBtn.addEventListener('click', commitSnapshot);
+lintMermaidBtn.addEventListener('click', () => updateLintReport(true));
+lintStageFixesBtn.addEventListener('click', stageLintFixes);
 generatePatchBtn.addEventListener('click', () => {
   void generatePatch();
 });

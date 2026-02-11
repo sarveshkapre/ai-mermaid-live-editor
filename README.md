@@ -39,6 +39,7 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Patch validation before apply (line-aware Mermaid errors)
 - Tab persistence recovery for malformed local state
 - Format Mermaid (safe whitespace normalization) with non-destructive preview
+- Lint Mermaid (common mistake detection + safe quick-fix staging)
 
 ## Quickstart
 ```bash

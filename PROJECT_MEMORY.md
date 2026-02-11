@@ -4,6 +4,14 @@ Structured, append-only notes for decisions and learnings that should persist ac
 
 ## Decisions
 
+### 2026-02-11: Ship In-Editor Mermaid Lint Assistant With Non-Destructive Quick Fixes
+- Decision: Add a lint assistant that detects high-frequency Mermaid mistakes (fenced markdown blocks, smart quotes, tab indentation, flowchart `->` typos, and missing `end` for `subgraph`) and stage fixes into Patch proposal instead of mutating the editor directly.
+- Why: This closes the roadmap’s top missing feature while preserving the product’s patch-first trust model (review diff before apply).
+- Evidence: `src/lib/mermaid-lint.js`, `src/main.js`, `index.html`, `src/styles.css`, `tests/mermaid-lint.test.js`, `tests/dom-ids.test.js`; `make check` pass; `make smoke` pass.
+- Commit: `(current cycle commit)`
+- Confidence: high
+- Trust label: trusted (local code/tests)
+
 ### 2026-02-09: Add Snapshot Presentation Mode
 - Decision: Add a lightweight presentation mode (full-screen dialog) that steps through the snapshot timeline with keyboard navigation (`P`, arrow keys) and timeline “Present” entry points.
 - Why: Presentation is a common expectation for diagram editors and makes snapshot history immediately useful for reviews and demos.
@@ -160,6 +168,12 @@ Structured, append-only notes for decisions and learnings that should persist ac
 
 ## Mistakes And Fixes
 
+### 2026-02-11: New Lint Module Failed Strict Typecheck Due To Untyped Issue Array
+- Mistake: `src/lib/mermaid-lint.js` initially declared `const issues = []`, which widened `severity` to `string` and failed `tsc --noEmit`.
+- Root cause: In JS + JSDoc mode, array literals without explicit typing lose intended string-literal unions when objects are pushed incrementally.
+- Fix: Added `/** @type {MermaidLintIssue[]} */` for `issues`.
+- Prevention rule: In strict `checkJs` files, explicitly annotate accumulator arrays/objects at declaration time.
+
 ### 2026-02-09: Smoke Test Waited For Closed Dialog To Become Visible
 - Mistake: Browser smoke check waited for `#presentation-dialog:not([open])` to be visible, but a closed `<dialog>` is hidden so the selector never became visible.
 - Root cause: Misunderstood Playwright `waitForSelector` defaults (visibility) and `<dialog>` open/close mechanics.
@@ -268,3 +282,15 @@ Structured, append-only notes for decisions and learnings that should persist ac
   kill $(cat /tmp/ai-mermaid-proxy-stream.pid) $(cat /tmp/ai-mermaid-stub-stream.pid)
   ```
 - GitHub Actions: `gh run watch 21859598842 --exit-status` -> success
+
+## Verification Evidence (2026-02-11 cycle 1)
+- `gh issue list --limit 50 --state open --json number,title,author,labels,updatedAt,url` -> pass (`[]`, no open issues by trusted authors/bots).
+- `gh run list --limit 12 --json databaseId,headBranch,headSha,name,conclusion,status,event,workflowName,updatedAt,url` -> pass (recent completed runs all `success`).
+- `npm run test` -> pass (11 files, 34 tests).
+- `npm run lint` -> pass.
+- `npm run typecheck` -> pass.
+- `make check` -> pass.
+- `make smoke` -> pass.
+- Local smoke path:
+  - `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` -> pass.
+  - `curl -fsSL http://127.0.0.1:4173/ | rg -n "lint-mermaid|lint-stage-fixes|lint-status|lint-issues"` -> pass.

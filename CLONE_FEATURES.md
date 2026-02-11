@@ -2,15 +2,36 @@
 
 ## Context Sources
 - README and docs (`PLAN.md`, `docs/ROADMAP.md`, `docs/PROJECT.md`)
-- GitHub Actions failures: runs `21702497753` and `21579298912`
+- GitHub issues (`gh issue list --state open --json ...`) filtered to trusted authors (`sarveshkapre`, GitHub bots)
+- GitHub Actions signals (`gh run list --limit 12 --json ...`)
 - Local baseline check (`make check`)
-- Quick code review sweep in `src/main.js` and `src/lib/*`
+- Quick code review sweep in `src/main.js`, `src/lib/*`, and `index.html`
+- Bounded market scan (Mermaid ecosystem + editors): `mermaidchart.com`, `mermaid.live`, `mermaid.js.org`, `simplemermaid.com`, `github.com/remcohaszing/maid`
 
 ## Candidate Features To Do
-- [ ] P3: Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
-- [ ] P3: User template gallery (save personal templates + import/export).
-- [ ] P3: Diff performance: consider Myers/patience diff fallback for large edits (keep current limits).
-- [ ] P3: Multi-diagram workspace: tags + search across tabs/history.
+- [ ] P2: Diff scalability fallback (patience/Myers option) for large edits without changing current guardrails.
+- [ ] P2: Personal template library (save, edit, delete, import/export templates).
+- [ ] P2: AI prompt history with pinned prompts and per-tab recall.
+- [ ] P2: Presentation mode polish (fit-to-slide toggle, speaker notes, click hotspots).
+- [ ] P2: Import UX hardening (CORS diagnostics, content-type hints, retry guidance).
+- [ ] P2: Recovery hardening for localStorage quota errors across tabs/drafts/history.
+- [ ] P2: Accessibility pass for dialogs/toolbars (tab order, labels, live-region verbosity).
+- [ ] P2: Tab search/filter and lightweight tags for multi-diagram navigation.
+- [ ] P3: Export fidelity checks (font fallback + dimension consistency snapshots).
+- [ ] P3: AI provider presets (saved endpoints/models by environment profile).
+- [ ] P3: CLI utility to validate/import/export Mermaid bundles offline.
+- [ ] P3: Performance profiling script for render/diff hot paths with reproducible fixture set.
+
+## Global Cycle 1 Prioritization (2026-02-11)
+Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
+
+| Task (selected first) | Impact | Effort | Strategic fit | Differentiation | Risk | Confidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| Diagram lint assistant + safe quick-fix staging | 5 | 2 | 5 | 3 | 2 | 4 |
+| Lint UI integration in editor/patch workflow | 4 | 2 | 5 | 2 | 2 | 4 |
+| Lint unit + DOM wiring coverage | 3 | 2 | 4 | 1 | 1 | 5 |
+| Docs/memory/changelog alignment + verification evidence | 2 | 1 | 5 | 1 | 1 | 5 |
+| Diff fallback algorithm spike (patience/Myers) | 4 | 4 | 4 | 2 | 3 | 2 |
 
 ## Cycle 1 Prioritization (2026-02-10)
 Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
@@ -52,6 +73,9 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 | Playwright browser smoke automation | 3 | 3 | 4 | 2 | 2 | 3 |
 
 ## Implemented
+- [x] (2026-02-11) P1 lint assistant: added Mermaid lint helpers for common syntax/paste mistakes (fenced markdown, smart quotes, tab indentation, flowchart single-arrow typos, unclosed `subgraph`) and integrated safe quick-fix staging into Patch proposal with issue surfacing in the editor panel.
+  - Evidence: `src/lib/mermaid-lint.js`, `src/main.js`, `index.html`, `src/styles.css`, `tests/mermaid-lint.test.js`, `tests/dom-ids.test.js`, `README.md`, `docs/ROADMAP.md`, `CHANGELOG.md`, `docs/CHANGELOG.md`, `make check`, `make smoke`.
+  - Commit: `(current cycle commit)`
 - [x] (2026-02-10) P1 AI streaming: generate AI patches via OpenAI-compatible SSE (Chat Completions + Responses) with progressive proposal fill, usage metadata display when available, and automatic fallback to non-streaming when `stream: true` is rejected; updated local proxy to pass through streaming responses.
   - Evidence: `src/main.js`, `src/lib/sse.js`, `src/lib/ai-stream.js`, `index.html`, `scripts/ai-proxy.mjs`, `tests/sse.test.js`, `tests/ai-stream.test.js`, `tests/dom-ids.test.js`, `make check`, `make smoke`.
   - Commit: `c10638e`
@@ -129,6 +153,8 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - A dedicated browser smoke script catches DOM-wiring regressions that unit tests miss (render/pan/patch/tab flows).
 - Using `?tab=new` / `?import=1` as one-shot import flags is best when the app clears them after import, keeping URLs clean and editable.
 - Modal dialogs are a better UX than `prompt()` for import flows and avoid browser-specific `prompt()` behavior differences.
+- Lightweight, deterministic lint rules for high-frequency Mermaid mistakes are safer than speculative auto-formatting because fixes can be staged into the existing patch review flow.
+- Keeping lint quick fixes non-destructive (proposal staging) aligns with the product’s core “review before apply” trust model.
 
 ## Market Scan Notes (2026-02-09)
 - Baseline expectations for Mermaid editors in the wild include: URL sharing, export to PNG/SVG (often PDF too), themes, autosave/recovery, and (in some products) collaboration/comments/presentations. Sources:
@@ -150,6 +176,12 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
   - Mermaid Chart docs: “Mermaid Chart AI” overview. (source: `https://docs.mermaidchart.com/mermaid-chart-ai/overview`)
 - OpenAI-compatible providers commonly expose streaming via `text/event-stream` (SSE); progressive fill reduces perceived latency and improves trust in long outputs. Sources:
   - OpenAI API docs: streaming guide. (source: `https://platform.openai.com/docs/guides/streaming`)
+
+## Market Scan Notes (2026-02-11 cycle 1 bounded scan)
+- Mermaid’s official ecosystem page lists both Mermaid Live Editor and third-party tooling, reinforcing that editor UX parity is expected while ecosystem extensions (like linting and formatting) are common value-adds. (source: `https://mermaid.js.org/ecosystem/tutorials.html`)
+- `maid` positions linting and formatting as first-class Mermaid workflow capabilities, which supports shipping in-editor lint helpers as a practical parity-plus feature. (source: `https://github.com/remcohaszing/maid`)
+- Mermaid Chart promotes a dedicated live editor workflow, signaling that fast edit/preview loops remain a market baseline for Mermaid products. (source: `https://www.mermaidchart.com/mermaid-live-editor`)
+- SimpleMermaid markets editor + autocomplete + side-by-side preview, reinforcing that reduced syntax friction is a user expectation in this segment. (source: `https://simplemermaid.com/editor`)
 
 ## Gap Map (2026-02-09 cycle 5)
 - Missing: AI streaming output + usage metadata; user template library (save/import/export); diagram lint quick-fixes; collaboration.
@@ -178,6 +210,22 @@ Scoring: 1 (low) to 5 (high). Risk: 1 (low) to 5 (high).
 - `make smoke` -> pass
 - Local proxy streaming pass-through smoke (stub upstream + proxy + fetch stream) -> pass (`chunks=3`)
 - GitHub Actions: `gh run watch 21859598842 --exit-status` -> success
+
+## Gap Map (2026-02-11 cycle 1)
+- Missing: user template library (save/import/export), collaboration/comments.
+- Weak: diff scalability fallback strategy for large edits; presentation polish (notes/hotspots/fit mode).
+- Parity: share links, import from file/URL, export PNG/SVG/PDF, autosave, AI patch generation/streaming, lint quick-fix assist.
+- Differentiator: patch-first workflow (proposal + diff + validation + undo) now extended with lint quick fixes staged into proposal.
+
+## Verification Evidence (2026-02-11 cycle 1)
+- `gh issue list --limit 50 --state open --json number,title,author,labels,updatedAt,url` -> pass (`[]`, no trusted-author issues open).
+- `gh run list --limit 12 --json databaseId,headBranch,headSha,name,conclusion,status,event,workflowName,updatedAt,url` -> pass (recent runs `success`, no failing completed CI runs).
+- `npm run test` -> pass (11 files, 34 tests).
+- `npm run lint` -> pass.
+- `npm run typecheck` -> pass.
+- `make check` -> pass.
+- `make smoke` -> pass (Playwright browser flow).
+- Local smoke path: `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` + `curl -fsSL http://127.0.0.1:4173/ | rg -n "lint-mermaid|lint-stage-fixes|lint-status|lint-issues"` -> pass.
 
 ## Notes
 - This file is maintained by the autonomous clone loop.

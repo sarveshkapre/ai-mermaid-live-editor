@@ -13,6 +13,6 @@ make release
 ```
 
 ## Next 3 improvements
-1. Real AI provider integration with patch validation.
-2. Diff heatmap and inline patch apply.
-3. Multi-page diagram library with tags.
+1. Personal template library (save/import/export templates).
+2. Diff scalability fallback for large edits (patience/Myers evaluation).
+3. Multi-diagram workspace metadata (tags + search/filter across tabs/history).

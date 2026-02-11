@@ -28,6 +28,7 @@
 - UX: snapshot links can be copied in importable form (opens as a new tab, editable)
 - UX: PDF export (print / save as PDF) with sizing settings
 - UX: “Format Mermaid” action (safe whitespace normalization) with diff preview
+- UX: “Lint Mermaid” assistant for common syntax mistakes with safe quick-fix staging into Patch proposal
 - AI: generation controls (temperature/max tokens/timeout) + cancel
 - AI: streaming patch output (OpenAI-compatible SSE) with progressive proposal fill + usage metadata when available
 - DX: optional Playwright browser smoke check (`make smoke`)

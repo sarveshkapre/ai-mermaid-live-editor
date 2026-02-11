@@ -545,6 +545,54 @@ select {
   gap: 16px;
 }
 
+.lint-box {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.lint-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.lint-head button {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.lint-issues {
+  display: grid;
+  gap: 8px;
+}
+
+.lint-item {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 13px;
+}
+
+.lint-item strong {
+  font-size: 13px;
+}
+
+.lint-item.lint-error {
+  border-color: color-mix(in oklab, #b32e2e 45%, var(--border));
+}
+
+.lint-item.lint-warning {
+  border-color: color-mix(in oklab, #b37315 45%, var(--border));
+}
+
 .diff {
   background: var(--bg-alt);
   border-radius: 14px;

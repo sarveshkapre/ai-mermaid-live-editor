@@ -92,12 +92,21 @@
             <button id="export-png" class="ghost" type="button">Export PNG</button>
             <button id="export-pdf" class="ghost" type="button">Export PDF</button>
             <button id="format-mermaid" class="ghost" type="button">Format Mermaid</button>
+            <button id="lint-mermaid" class="ghost" type="button">Lint Mermaid</button>
             <button id="copy-source" class="ghost" type="button">Copy Mermaid</button>
             <button id="copy-svg" class="ghost" type="button">Copy SVG</button>
             <button id="copy-png" class="ghost" type="button">Copy PNG</button>
           </div>
           <div class="stats" id="stats"></div>
           <div class="hint" id="health"></div>
+          <div class="lint-box">
+            <div class="lint-head">
+              <div class="label">Lint assistant</div>
+              <button id="lint-stage-fixes" class="ghost" type="button">Stage quick fixes</button>
+            </div>
+            <div id="lint-status" class="hint">Lint: run to detect common Mermaid issues.</div>
+            <div id="lint-issues" class="lint-issues"><div class="hint">No findings.</div></div>
+          </div>
         </div>
 
         <div class="panel" id="render-panel">

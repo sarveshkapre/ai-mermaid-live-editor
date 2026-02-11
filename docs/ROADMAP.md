@@ -1,9 +1,10 @@
 # ROADMAP
 
 ## Near-term
-- Diagram linting helpers (detect common Mermaid mistakes + quick fixes).
+- User template gallery (save personal templates + import/export).
 
 ## Shipped
+- Diagram linting helpers (detect common Mermaid mistakes + safe quick-fix staging). (2026-02-11)
 - AI streaming patch output (progressively fill proposal) + usage metadata when available. (2026-02-10)
 - Presentation mode (full-screen + step-through snapshots) (2026-02-09)
 - PDF export (print-friendly sizing) (2026-02-09)

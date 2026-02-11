@@ -9,6 +9,7 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Shareable links via URL hash
 - SVG/PNG export
 - Dark mode + keyboard shortcuts
+- Mermaid lint assistant with safe quick-fix staging into patch proposal
 
 ## Shipped (2026-02-01)
 - Shortcuts dialog (`?` to open) + accessible dialog styling
@@ -35,9 +36,9 @@ Local-first split-screen Mermaid editor with live rendering, patch-driven refact
 - Added unit coverage for tab normalization and Mermaid error parsing helpers.
 
 ## Next to ship
-- UX: export sizing presets
-- Reliability: performance guardrails for very large diffs/diagrams
-- Product: real AI provider integration (OpenAI-compatible)
+- UX: personal template library (save/import/export)
+- Reliability: diff scalability fallback for large edits
+- Product: multi-diagram organization (tags + search)
 
 ## Top risks / unknowns
 - Mermaid render performance on very large diagrams
