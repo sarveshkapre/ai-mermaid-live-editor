@@ -10,3 +10,14 @@ This log tracks real failures/regressions and the prevention rules that come out
   - Root cause: missing JSDoc type annotation on `issues` array in a `checkJs` strict file.
   - Remediation: annotate with `/** @type {MermaidLintIssue[]} */` and rerun full checks.
   - Prevention rule: pre-type all mutable accumulators in strict JS modules before pushing typed objects.
+
+### 2026-02-12T20:01:06Z | Codex execution failure
+- Date: 2026-02-12T20:01:06Z
+- Trigger: Codex execution failure
+- Impact: Repo session did not complete cleanly
+- Root Cause: codex exec returned a non-zero status
+- Fix: Captured failure logs and kept repository in a recoverable state
+- Prevention Rule: Re-run with same pass context and inspect pass log before retrying
+- Evidence: pass_log=logs/20260212-101456-ai-mermaid-live-editor-cycle-2.log
+- Commit: pending
+- Confidence: medium
