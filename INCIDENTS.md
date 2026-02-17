@@ -560,3 +560,16 @@ This log tracks real failures/regressions and the prevention rules that come out
 - Evidence: pass_log=logs/20260216-144104-ai-mermaid-live-editor-cycle-22.log
 - Commit: pending
 - Confidence: medium
+
+### 2026-02-17 | Typecheck regression during feature train
+- Date: 2026-02-17
+- Trigger: `make check` failure during 10-commit feature train
+- Impact: Release gate blocked until type safety was restored
+- Root Cause: Two strict typing misses in `src/main.js` after tab/tag and template-library changes:
+  - nullable `DiagramTemplate | null` inference in custom template loader
+  - snapshot tab initialization missing required `tags` field
+- Fix: Switched loader to explicit typed accumulator and added `tags: []` to snapshot tab creation.
+- Prevention Rule: Re-run full `make check` after every schema/type shape change; avoid relying on `filter(Boolean)` for type narrowing in strict `checkJs`.
+- Evidence: `make check` initial fail, `make check` pass after fix.
+- Commit: pending
+- Confidence: high

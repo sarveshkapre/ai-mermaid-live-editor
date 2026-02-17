@@ -38,8 +38,13 @@ Split-screen Mermaid editor with live preview and patch-driven AI refactors.
 - Dark mode and keyboard shortcuts
 - Patch validation before apply (line-aware Mermaid errors)
 - Tab persistence recovery for malformed local state
+- Tab search, tags, and keyboard quick switch (`Cmd/Ctrl + K`, `Alt + 1-9`)
 - Format Mermaid (safe whitespace normalization) with non-destructive preview
 - Lint Mermaid (common mistake detection + safe quick-fix staging)
+- Personal template library (save/update/rename/delete + JSON import/export)
+- Large-edit diff fallback summary (+/- counts with bounded preview)
+- Import diagnostics for CORS/auth/content-type failures
+- Storage failure hardening for draft/history in restricted browser modes
 
 ## Quickstart
 ```bash

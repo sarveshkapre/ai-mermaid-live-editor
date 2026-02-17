@@ -156,6 +156,66 @@ const TEMPLATE_LIBRARY = [
   deploy --> monitor[Monitor]
 `,
   },
+  {
+    id: 'delivery-roadmap',
+    title: 'Delivery roadmap',
+    category: 'Product',
+    summary: 'Track milestones across design, build, and launch.',
+    diagram: `gantt
+  title Delivery roadmap
+  dateFormat  YYYY-MM-DD
+  axisFormat  %b %d
+  section Discovery
+  Problem framing         :done, a1, 2026-02-01, 10d
+  User interviews         :done, a2, after a1, 7d
+  section Build
+  MVP implementation      :active, b1, 2026-02-20, 14d
+  QA and hardening        :b2, after b1, 7d
+  section Launch
+  Stakeholder rollout     :c1, 2026-03-18, 5d
+`,
+  },
+  {
+    id: 'data-model',
+    title: 'Data model',
+    category: 'Engineering',
+    summary: 'Sketch entities and ownership boundaries quickly.',
+    diagram: `erDiagram
+  USER ||--o{ ORDER : places
+  ORDER ||--|{ ORDER_ITEM : contains
+  PRODUCT ||--o{ ORDER_ITEM : appears_in
+  USER {
+    string id
+    string email
+    string plan
+  }
+  ORDER {
+    string id
+    string status
+    datetime created_at
+  }
+  PRODUCT {
+    string sku
+    string name
+    float price
+  }
+`,
+  },
+  {
+    id: 'program-timeline',
+    title: 'Program timeline',
+    category: 'Operations',
+    summary: 'Share a narrative milestone timeline with teams.',
+    diagram: `timeline
+  title Program timeline
+  2026 Q1 : Discovery complete
+          : Team kickoff
+  2026 Q2 : Beta launch
+          : Feedback review
+  2026 Q3 : GA release
+          : Expansion planning
+`,
+  },
 ];
 
 const PROMPT_RECIPES = [
@@ -188,6 +248,11 @@ const PROMPT_RECIPES = [
     id: 'handoffs',
     title: 'Highlight handoffs',
     prompt: 'Emphasize handoffs between teams with explicit approval checkpoints.',
+  },
+  {
+    id: 'entity-model',
+    title: 'Extract data model',
+    prompt: 'Turn this process into an ER diagram showing key entities and relationships.',
   },
 ];
 
@@ -867,26 +932,25 @@ function loadCustomTemplates() {
   try {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((item) => {
-        if (!item || typeof item !== 'object') return null;
-        const data = /** @type {Record<string, unknown>} */ (item);
-        const id = typeof data.id === 'string' ? data.id.trim() : '';
-        const title = typeof data.title === 'string' ? data.title.trim() : '';
-        const summary = typeof data.summary === 'string' ? data.summary.trim() : '';
-        const diagram = typeof data.diagram === 'string' ? data.diagram : '';
-        if (!id || !title || !diagram.trim()) return null;
-        /** @type {DiagramTemplate} */
-        const template = {
-          id,
-          title: title.slice(0, 50),
-          category: 'Custom',
-          summary: summary || 'Saved from your current diagram.',
-          diagram,
-        };
-        return template;
-      })
-      .filter((item) => Boolean(item));
+    /** @type {DiagramTemplate[]} */
+    const templates = [];
+    parsed.forEach((item) => {
+      if (!item || typeof item !== 'object') return;
+      const data = /** @type {Record<string, unknown>} */ (item);
+      const id = typeof data.id === 'string' ? data.id.trim() : '';
+      const title = typeof data.title === 'string' ? data.title.trim() : '';
+      const summary = typeof data.summary === 'string' ? data.summary.trim() : '';
+      const diagram = typeof data.diagram === 'string' ? data.diagram : '';
+      if (!id || !title || !diagram.trim()) return;
+      templates.push({
+        id,
+        title: title.slice(0, 50),
+        category: 'Custom',
+        summary: summary || 'Saved from your current diagram.',
+        diagram,
+      });
+    });
+    return templates;
   } catch {
     return [];
   }
@@ -3212,6 +3276,7 @@ function init() {
         diagram: snapshot.diagram,
         createdAt: now,
         updatedAt: now,
+        tags: [],
       },
     ];
     activeTabId = tabs[0].id;

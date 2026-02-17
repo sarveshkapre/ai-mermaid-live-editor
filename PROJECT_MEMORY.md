@@ -295,3 +295,17 @@ Structured, append-only notes for decisions and learnings that should persist ac
   - `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` -> pass.
   - `curl -fsSL http://127.0.0.1:4173/ | rg -n "lint-mermaid|lint-stage-fixes|lint-status|lint-issues"` -> pass.
 - GitHub Actions: `gh run watch 21897363082 --exit-status` -> success.
+
+## Decisions
+
+### 2026-02-17: Complete Template/Navigation/Reliability Backlog With Ten Incremental Commits
+- Decision: Implement ten scoped improvements focused on highest-impact usability gaps: personal template lifecycle (save/update/rename/delete), template import/export, tab search + tags + keyboard quick-switch, large-diff summary fallback, URL import diagnostics, storage failure resilience, and expanded starter templates (gantt/ER/timeline).
+- Why: These were the clearest open product gaps for repeated real usage and are aligned with current Mermaid editor expectations (template reuse, multi-diagram navigation, robust imports).
+- Evidence: `src/main.js`, `src/lib/diff.js`, `src/lib/tabs.js`, `src/lib/draft.js`, `src/lib/history.js`, `index.html`, `src/styles.css`, `tests/diff.test.js`, `tests/tabs.test.js`, `tests/draft.test.js`, `tests/history.test.js`, `tests/dom-ids.test.js`, `README.md`.
+- Commits: `f6876d6`, `a2d632e`, `5ae9842`, `7bcd588`, `e689978`, `6d6b8c4`, `b6bb93c`, `39ad944`, `25f4ad1`, `pending`.
+- Confidence: high
+- Trust label: local verification
+
+## Verification Evidence (2026-02-17 cycle 1)
+- `make check` -> fail (`npm run typecheck` reported two errors in `src/main.js`: nullable template-array narrowing and a snapshot tab object missing required `tags`).
+- `make check` -> pass (lint, typecheck, tests, build, and audit all successful).
