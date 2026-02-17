@@ -1136,13 +1136,46 @@ async function resolveImportFromUrlInput(input) {
 
   const fetchUrl = new URL(url.toString());
   fetchUrl.hash = '';
-  const res = await fetch(fetchUrl.toString(), { method: 'GET' });
+  const res = await fetch(fetchUrl.toString(), { method: 'GET', mode: 'cors' });
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('URL is protected (authentication required).');
+    }
+    if (res.status === 404) {
+      throw new Error('URL not found (HTTP 404).');
+    }
     throw new Error(`Fetch failed (HTTP ${res.status}).`);
+  }
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const looksTextual =
+    !contentType ||
+    contentType.includes('text/plain') ||
+    contentType.includes('text/markdown') ||
+    contentType.includes('text/x-markdown') ||
+    contentType.includes('application/json') ||
+    contentType.includes('application/octet-stream');
+  if (!looksTextual || contentType.includes('text/html')) {
+    throw new Error(`URL returned unsupported content type (${contentType || 'unknown'}).`);
   }
   const text = await res.text();
   const filename = decodeURIComponent(fetchUrl.pathname.split('/').pop() || 'imported.mmd');
   return { title: tabTitleFromFilename(filename), diagram: text, project: null };
+}
+
+/**
+ * @param {unknown} error
+ * @returns {string}
+ */
+function formatImportError(error) {
+  const message = errorToMessage(error);
+  const lower = message.toLowerCase();
+  if (lower.includes('failed to fetch')) {
+    return 'Network/CORS blocked the request. Use a raw file URL with CORS enabled.';
+  }
+  if (lower.includes('unsupported content type')) {
+    return `${message}. Point to a raw Mermaid text file instead of an HTML page.`;
+  }
+  return message;
 }
 
 async function importMermaidFromUrl() {
@@ -1169,7 +1202,7 @@ async function importMermaidFromUrl() {
       saveProject(getProjectPayload());
     }
   } catch (error) {
-    showToast(`Import failed: ${errorToMessage(error)}`);
+    showToast(`Import failed: ${formatImportError(error)}`);
   }
 }
 
