@@ -1604,6 +1604,66 @@ function saveCurrentAsTemplate() {
 }
 
 /**
+ * @param {string} templateId
+ */
+function updateCustomTemplateFromEditor(templateId) {
+  if (isReadOnly) return;
+  const diagram = editor.value.trim();
+  if (!diagram) {
+    showToast('Write a diagram before updating a template.');
+    return;
+  }
+  const index = customTemplates.findIndex((item) => item.id === templateId);
+  if (index < 0) return;
+  customTemplates[index] = {
+    ...customTemplates[index],
+    diagram,
+    summary: `Updated from "${getActiveTab()?.title || 'diagram'}"`,
+  };
+  saveCustomTemplates();
+  renderTemplates();
+  showToast(`Updated template: ${customTemplates[index].title}.`);
+}
+
+/**
+ * @param {string} templateId
+ */
+function renameCustomTemplate(templateId) {
+  if (isReadOnly) return;
+  const index = customTemplates.findIndex((item) => item.id === templateId);
+  if (index < 0) return;
+  const next = (prompt('Rename template', customTemplates[index].title) || '').trim();
+  if (!next) return;
+  customTemplates[index] = {
+    ...customTemplates[index],
+    title: next.slice(0, 50),
+  };
+  saveCustomTemplates();
+  renderTemplates();
+  showToast(`Renamed template: ${customTemplates[index].title}.`);
+}
+
+/**
+ * @param {string} templateId
+ */
+function deleteCustomTemplate(templateId) {
+  if (isReadOnly) return;
+  const index = customTemplates.findIndex((item) => item.id === templateId);
+  if (index < 0) return;
+  const item = customTemplates[index];
+  if (!confirm(`Delete template "${item.title}"?`)) return;
+  customTemplates.splice(index, 1);
+  if (activeTemplateId === templateId) {
+    activeTemplateId = null;
+    localStorage.removeItem(TEMPLATE_ACTIVE_KEY);
+  }
+  saveCustomTemplates();
+  renderTemplateFilters();
+  renderTemplates();
+  showToast(`Deleted template: ${item.title}.`);
+}
+
+/**
  * @param {DiagramTemplate} template
  */
 function matchesTemplate(template) {
@@ -1644,6 +1704,28 @@ function renderTemplates() {
     useBtn.textContent = 'Use template';
     useBtn.addEventListener('click', () => applyTemplate(template));
     actions.appendChild(useBtn);
+    if (template.category === 'Custom') {
+      const updateBtn = document.createElement('button');
+      updateBtn.type = 'button';
+      updateBtn.className = 'ghost';
+      updateBtn.textContent = 'Update';
+      updateBtn.addEventListener('click', () => updateCustomTemplateFromEditor(template.id));
+      actions.appendChild(updateBtn);
+
+      const renameBtn = document.createElement('button');
+      renameBtn.type = 'button';
+      renameBtn.className = 'ghost';
+      renameBtn.textContent = 'Rename';
+      renameBtn.addEventListener('click', () => renameCustomTemplate(template.id));
+      actions.appendChild(renameBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'ghost';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteCustomTemplate(template.id));
+      actions.appendChild(deleteBtn);
+    }
     card.appendChild(actions);
     templateGrid.appendChild(card);
   });
