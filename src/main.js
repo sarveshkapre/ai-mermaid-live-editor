@@ -351,6 +351,12 @@ const templateFilters = byId('template-filters');
 const templateEmpty = byId('template-empty');
 /** @type {HTMLButtonElement} */
 const saveTemplateBtn = byId('save-template');
+/** @type {HTMLButtonElement} */
+const exportTemplatesBtn = byId('export-templates');
+/** @type {HTMLButtonElement} */
+const importTemplatesBtn = byId('import-templates-btn');
+/** @type {HTMLInputElement} */
+const importTemplatesInput = byId('import-templates-input');
 /** @type {HTMLDivElement} */
 const promptRecipes = byId('prompt-recipes');
 /** @type {HTMLDivElement} */
@@ -893,6 +899,59 @@ function saveCustomTemplates() {
  */
 function getTemplateLibrary() {
   return [...TEMPLATE_LIBRARY, ...customTemplates];
+}
+
+function exportCustomTemplates() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    templates: customTemplates.map((template) => ({
+      id: template.id,
+      title: template.title,
+      summary: template.summary,
+      diagram: template.diagram,
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, `mermaid-custom-templates-${new Date().toISOString().slice(0, 10)}.json`);
+  showToast(`Exported ${customTemplates.length} custom template${customTemplates.length === 1 ? '' : 's'}.`);
+}
+
+/**
+ * @param {string} text
+ * @returns {number}
+ */
+function importCustomTemplatesFromJson(text) {
+  const parsed = JSON.parse(text);
+  if (!parsed || typeof parsed !== 'object') return 0;
+  const data = /** @type {Record<string, unknown>} */ (parsed);
+  const templatesInput = Array.isArray(data.templates) ? data.templates : [];
+  let added = 0;
+  templatesInput.forEach((item) => {
+    if (!item || typeof item !== 'object') return;
+    const row = /** @type {Record<string, unknown>} */ (item);
+    const title = typeof row.title === 'string' ? row.title.trim() : '';
+    const summary = typeof row.summary === 'string' ? row.summary.trim() : '';
+    const diagram = typeof row.diagram === 'string' ? row.diagram.trim() : '';
+    if (!title || !diagram) return;
+    const exists = customTemplates.some((template) => template.title.toLowerCase() === title.toLowerCase());
+    if (exists) return;
+    customTemplates.push({
+      id: `custom-${crypto.randomUUID()}`,
+      title: title.slice(0, 50),
+      category: 'Custom',
+      summary: summary || 'Imported template.',
+      diagram,
+    });
+    added += 1;
+  });
+  if (added) {
+    customTemplates = customTemplates.slice(-40);
+    saveCustomTemplates();
+    renderTemplateFilters();
+    renderTemplates();
+  }
+  return added;
 }
 
 /**
@@ -1481,6 +1540,7 @@ function applyReadOnlyMode() {
     importFileBtn,
     importUrlBtn,
     saveTemplateBtn,
+    importTemplatesBtn,
     addTabBtn,
     duplicateTabBtn,
     renameTabBtn,
@@ -3117,6 +3177,24 @@ templateSearch.addEventListener('input', () => {
   renderTemplates();
 });
 saveTemplateBtn.addEventListener('click', saveCurrentAsTemplate);
+exportTemplatesBtn.addEventListener('click', exportCustomTemplates);
+importTemplatesBtn.addEventListener('click', () => importTemplatesInput.click());
+importTemplatesInput.addEventListener('change', async () => {
+  const file = importTemplatesInput.files && importTemplatesInput.files[0] ? importTemplatesInput.files[0] : null;
+  importTemplatesInput.value = '';
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const added = importCustomTemplatesFromJson(text);
+    if (!added) {
+      showToast('No new templates imported.');
+      return;
+    }
+    showToast(`Imported ${added} template${added === 1 ? '' : 's'}.`);
+  } catch {
+    showToast('Template import failed.');
+  }
+});
 
 addTabBtn.addEventListener('click', addTab);
 duplicateTabBtn.addEventListener('click', duplicateTab);
