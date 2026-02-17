@@ -78,3 +78,79 @@ export function diffLines(before, after) {
 
   return [...prefix, ...output, ...suffix];
 }
+
+/**
+ * Bounded fallback diff for very large texts where full DP is too expensive.
+ * @param {string} before
+ * @param {string} after
+ * @param {number=} maxLines
+ * @returns {{lines: {type: 'add'|'remove', text: string}[], truncated: boolean, adds: number, removes: number}}
+ */
+export function summarizeLargeDiff(before, after, maxLines = 160) {
+  const left = before.split('\n');
+  const right = after.split('\n');
+  const lookahead = 8;
+  let i = 0;
+  let j = 0;
+  let adds = 0;
+  let removes = 0;
+  /** @type {{type: 'add'|'remove', text: string}[]} */
+  const lines = [];
+
+  while ((i < left.length || j < right.length) && lines.length < maxLines) {
+    const leftLine = i < left.length ? left[i] : null;
+    const rightLine = j < right.length ? right[j] : null;
+
+    if (leftLine === rightLine) {
+      i += 1;
+      j += 1;
+      continue;
+    }
+
+    const leftWindow = left.slice(i, Math.min(left.length, i + lookahead));
+    const rightWindow = right.slice(j, Math.min(right.length, j + lookahead));
+    const rightExistsSoon = rightLine !== null && leftWindow.includes(rightLine);
+    const leftExistsSoon = leftLine !== null && rightWindow.includes(leftLine);
+
+    if (rightLine !== null && (!rightExistsSoon || leftLine === null)) {
+      lines.push({ type: 'add', text: rightLine });
+      adds += 1;
+      j += 1;
+      continue;
+    }
+
+    if (leftLine !== null && (!leftExistsSoon || rightLine === null)) {
+      lines.push({ type: 'remove', text: leftLine });
+      removes += 1;
+      i += 1;
+      continue;
+    }
+
+    if (leftLine !== null) {
+      lines.push({ type: 'remove', text: leftLine });
+      removes += 1;
+      i += 1;
+    }
+    if (rightLine !== null && lines.length < maxLines) {
+      lines.push({ type: 'add', text: rightLine });
+      adds += 1;
+      j += 1;
+    }
+  }
+
+  while (i < left.length) {
+    removes += 1;
+    i += 1;
+  }
+  while (j < right.length) {
+    adds += 1;
+    j += 1;
+  }
+
+  return {
+    lines,
+    truncated: lines.length >= maxLines,
+    adds,
+    removes,
+  };
+}

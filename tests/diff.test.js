@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { diffLines } from '../src/lib/diff.js';
+import { diffLines, summarizeLargeDiff } from '../src/lib/diff.js';
 
 describe('diffLines', () => {
   test('marks additions and removals', () => {
@@ -21,5 +21,22 @@ describe('diffLines', () => {
     expect(diff.some((line) => line.type === 'add' && line.text === 'X')).toBe(true);
     expect(diff[diff.length - 2]).toEqual({ type: 'context', text: 'd' });
     expect(diff[diff.length - 1]).toEqual({ type: 'context', text: 'e' });
+  });
+});
+
+describe('summarizeLargeDiff', () => {
+  test('returns aggregate add/remove counts', () => {
+    const summary = summarizeLargeDiff('a\nb\nc', 'a\nx\ny\nc');
+    expect(summary.adds).toBeGreaterThan(0);
+    expect(summary.removes).toBeGreaterThan(0);
+    expect(summary.lines.length).toBeGreaterThan(0);
+  });
+
+  test('respects max line bound and marks truncation', () => {
+    const before = Array.from({ length: 400 }, (_, i) => `left-${i}`).join('\n');
+    const after = Array.from({ length: 400 }, (_, i) => `right-${i}`).join('\n');
+    const summary = summarizeLargeDiff(before, after, 20);
+    expect(summary.lines.length).toBe(20);
+    expect(summary.truncated).toBe(true);
   });
 });

@@ -1,4 +1,4 @@
-import { diffLines } from './lib/diff.js';
+import { diffLines, summarizeLargeDiff } from './lib/diff.js';
 import { clearDraft, loadDraft, saveDraft } from './lib/draft.js';
 import { addSnapshot, clearHistory, loadHistory } from './lib/history.js';
 import { decodeHash, encodeHash } from './lib/hash.js';
@@ -2207,7 +2207,20 @@ function updateDiff() {
     return;
   }
   if (isTooLargeForDiff(base, next)) {
-    diffEl.innerHTML = '<div class="hint">Diff too large to compute automatically.</div>';
+    const fallback = summarizeLargeDiff(base, next);
+    if (!fallback.lines.length) {
+      diffEl.innerHTML = '<div class="hint">Large diff summary: no line-level deltas detected.</div>';
+      return;
+    }
+    const summary = `<div class="hint">Large diff summary: +${fallback.adds} / -${fallback.removes}${fallback.truncated ? ' (truncated preview)' : ''}</div>`;
+    const rows = fallback.lines
+      .map((line) => {
+        const prefix = line.type === 'add' ? '+' : '-';
+        const className = line.type === 'add' ? 'add' : 'remove';
+        return `<div class="${className}">${prefix} ${escapeHtml(line.text)}</div>`;
+      })
+      .join('');
+    diffEl.innerHTML = `${summary}${rows}`;
     return;
   }
   const diff = diffLines(base, next);
