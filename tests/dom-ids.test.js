@@ -63,6 +63,7 @@ describe('index.html wiring', () => {
       'readonly-banner',
       'template-search',
       'template-filters',
+      'save-template',
       'template-grid',
       'template-empty',
       'prompt-recipes',

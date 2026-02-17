@@ -349,6 +349,8 @@ const templateSearch = byId('template-search');
 const templateFilters = byId('template-filters');
 /** @type {HTMLDivElement} */
 const templateEmpty = byId('template-empty');
+/** @type {HTMLButtonElement} */
+const saveTemplateBtn = byId('save-template');
 /** @type {HTMLDivElement} */
 const promptRecipes = byId('prompt-recipes');
 /** @type {HTMLDivElement} */
@@ -486,6 +488,8 @@ let activeTemplateId = null;
 let activeTemplateFilter = 'All';
 /** @type {string} */
 let templateQuery = '';
+/** @type {DiagramTemplate[]} */
+let customTemplates = [];
 /** @type {string | null} */
 let activeTabId = null;
 /** @type {DiagramTab[]} */
@@ -514,6 +518,7 @@ let presentationRenderSeq = 0;
 const TABS_KEY = 'ai-mermaid-tabs';
 const ACTIVE_TAB_KEY = 'ai-mermaid-tabs-active';
 const TEMPLATE_ACTIVE_KEY = 'ai-mermaid-template-active';
+const TEMPLATE_LIBRARY_KEY = 'ai-mermaid-template-library';
 const PROJECT_KEY = 'ai-mermaid-project';
 const SHARE_SNAPSHOT_KEY = 'snap:';
 const PREVIEW_SCALE_KEY = 'ai-mermaid-preview-scale';
@@ -837,6 +842,57 @@ function applyProjectPayload(payload) {
   if (typeof data.owner === 'string') projectOwnerInput.value = data.owner;
   if (typeof data.purpose === 'string') projectPurposeInput.value = data.purpose;
   if (typeof data.useFilenames === 'boolean') useFilenamesToggle.checked = data.useFilenames;
+}
+
+/**
+ * @returns {DiagramTemplate[]}
+ */
+function loadCustomTemplates() {
+  const raw = localStorage.getItem(TEMPLATE_LIBRARY_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const data = /** @type {Record<string, unknown>} */ (item);
+        const id = typeof data.id === 'string' ? data.id.trim() : '';
+        const title = typeof data.title === 'string' ? data.title.trim() : '';
+        const summary = typeof data.summary === 'string' ? data.summary.trim() : '';
+        const diagram = typeof data.diagram === 'string' ? data.diagram : '';
+        if (!id || !title || !diagram.trim()) return null;
+        /** @type {DiagramTemplate} */
+        const template = {
+          id,
+          title: title.slice(0, 50),
+          category: 'Custom',
+          summary: summary || 'Saved from your current diagram.',
+          diagram,
+        };
+        return template;
+      })
+      .filter((item) => Boolean(item));
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomTemplates() {
+  const payload = customTemplates.map((template) => ({
+    id: template.id,
+    title: template.title,
+    summary: template.summary,
+    diagram: template.diagram,
+  }));
+  localStorage.setItem(TEMPLATE_LIBRARY_KEY, JSON.stringify(payload));
+}
+
+/**
+ * @returns {DiagramTemplate[]}
+ */
+function getTemplateLibrary() {
+  return [...TEMPLATE_LIBRARY, ...customTemplates];
 }
 
 /**
@@ -1424,6 +1480,7 @@ function applyReadOnlyMode() {
     downloadSourceBtn,
     importFileBtn,
     importUrlBtn,
+    saveTemplateBtn,
     addTabBtn,
     duplicateTabBtn,
     renameTabBtn,
@@ -1470,7 +1527,7 @@ function renderPromptRecipes() {
 }
 
 function getTemplateFilters() {
-  const categories = Array.from(new Set(TEMPLATE_LIBRARY.map((item) => item.category)));
+  const categories = Array.from(new Set(getTemplateLibrary().map((item) => item.category)));
   return ['All', ...categories];
 }
 
@@ -1517,6 +1574,35 @@ function applyTemplate(template) {
   showToast(`Loaded template: ${template.title}.`);
 }
 
+function saveCurrentAsTemplate() {
+  if (isReadOnly) return;
+  const active = getActiveTab();
+  if (!active) return;
+  const diagram = editor.value.trim();
+  if (!diagram) {
+    showToast('Write a diagram before saving a template.');
+    return;
+  }
+  const title = (prompt('Template name', active.title) || '').trim();
+  if (!title) return;
+  const summary = (prompt('Template summary', `Saved from "${active.title}"`) || '').trim();
+  /** @type {DiagramTemplate} */
+  const template = {
+    id: `custom-${crypto.randomUUID()}`,
+    title: title.slice(0, 50),
+    category: 'Custom',
+    summary: summary.slice(0, 100) || 'Saved from your current diagram.',
+    diagram,
+  };
+  customTemplates.unshift(template);
+  customTemplates = customTemplates.slice(0, 40);
+  saveCustomTemplates();
+  activeTemplateId = template.id;
+  renderTemplateFilters();
+  renderTemplates();
+  showToast(`Saved template: ${template.title}.`);
+}
+
 /**
  * @param {DiagramTemplate} template
  */
@@ -1534,7 +1620,7 @@ function matchesTemplate(template) {
 }
 
 function renderTemplates() {
-  const items = TEMPLATE_LIBRARY.filter(matchesTemplate);
+  const items = getTemplateLibrary().filter(matchesTemplate);
   templateGrid.innerHTML = '';
   templateEmpty.hidden = items.length > 0;
   items.forEach((template) => {
@@ -2844,6 +2930,7 @@ function init() {
   loadPresetOptions();
   renderExportHistory();
   renderPromptRecipes();
+  customTemplates = loadCustomTemplates();
   activeTemplateId = localStorage.getItem(TEMPLATE_ACTIVE_KEY);
   renderTemplateFilters();
   renderTemplates();
@@ -2947,6 +3034,7 @@ templateSearch.addEventListener('input', () => {
   templateQuery = templateSearch.value;
   renderTemplates();
 });
+saveTemplateBtn.addEventListener('click', saveCurrentAsTemplate);
 
 addTabBtn.addEventListener('click', addTab);
 duplicateTabBtn.addEventListener('click', duplicateTab);
