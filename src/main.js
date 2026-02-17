@@ -361,6 +361,8 @@ const importTemplatesInput = byId('import-templates-input');
 const promptRecipes = byId('prompt-recipes');
 /** @type {HTMLDivElement} */
 const tabList = byId('tab-list');
+/** @type {HTMLInputElement} */
+const tabSearchInput = byId('tab-search');
 /** @type {HTMLButtonElement} */
 const addTabBtn = byId('add-tab');
 /** @type {HTMLButtonElement} */
@@ -500,6 +502,8 @@ let customTemplates = [];
 let activeTabId = null;
 /** @type {DiagramTab[]} */
 let tabs = [];
+/** @type {string} */
+let tabQuery = '';
 /** @type {number | null} */
 let lastErrorLine = null;
 /** @type {number} */
@@ -1240,11 +1244,20 @@ function persistTabs() {
 
 function renderTabs() {
   tabList.innerHTML = '';
-  tabs.forEach((tab) => {
+  const query = tabQuery.trim().toLowerCase();
+  const visibleTabs = query
+    ? tabs.filter((tab) => tab.title.toLowerCase().includes(query))
+    : tabs;
+  if (!visibleTabs.length) {
+    tabList.innerHTML = '<div class="hint">No tabs match this search.</div>';
+    return;
+  }
+  visibleTabs.forEach((tab) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `tab${tab.id === activeTabId ? ' is-active' : ''}`;
     btn.textContent = tab.title;
+    btn.title = tab.title;
     btn.addEventListener('click', () => setActiveTab(tab.id));
     tabList.appendChild(btn);
   });
@@ -3175,6 +3188,10 @@ proposal.addEventListener('input', updateDiff);
 templateSearch.addEventListener('input', () => {
   templateQuery = templateSearch.value;
   renderTemplates();
+});
+tabSearchInput.addEventListener('input', () => {
+  tabQuery = tabSearchInput.value;
+  renderTabs();
 });
 saveTemplateBtn.addEventListener('click', saveCurrentAsTemplate);
 exportTemplatesBtn.addEventListener('click', exportCustomTemplates);

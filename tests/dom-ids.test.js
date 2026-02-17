@@ -70,6 +70,7 @@ describe('index.html wiring', () => {
       'template-grid',
       'template-empty',
       'prompt-recipes',
+      'tab-search',
       'tab-list',
       'add-tab',
       'duplicate-tab',
