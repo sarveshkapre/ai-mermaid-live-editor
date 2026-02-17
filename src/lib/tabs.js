@@ -1,5 +1,5 @@
 /**
- * @typedef {{id: string, title: string, diagram: string, createdAt: number, updatedAt: number}} DiagramTab
+ * @typedef {{id: string, title: string, diagram: string, createdAt: number, updatedAt: number, tags: string[]}} DiagramTab
  */
 
 /**
@@ -20,6 +20,7 @@ export function createDefaultTab(defaultDiagram, options = {}) {
     diagram: defaultDiagram,
     createdAt: now,
     updatedAt: now,
+    tags: [],
   };
 }
 
@@ -50,12 +51,20 @@ function normalizeTab(value, defaultDiagram, now, createId) {
       ? raw.updatedAt
       : createdAt;
 
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags
+        .map((tag) => (typeof tag === 'string' ? tag.trim().toLowerCase() : ''))
+        .filter(Boolean)
+        .slice(0, 8)
+    : [];
+
   return {
     id,
     title,
     diagram,
     createdAt,
     updatedAt: Math.max(createdAt, updatedAtInput),
+    tags,
   };
 }
 

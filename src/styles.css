@@ -479,6 +479,11 @@ select {
   flex-wrap: wrap;
 }
 
+#save-tab-tags {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
 .label {
   font-size: 12px;
   text-transform: uppercase;

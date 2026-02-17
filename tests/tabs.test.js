@@ -24,6 +24,7 @@ describe('tab state normalization', () => {
       diagram: 'flowchart TD\n  A-->B',
       createdAt: 10,
       updatedAt: 10,
+      tags: [],
     });
     expect(state.activeTabId).toBe('id-1');
   });
@@ -38,6 +39,7 @@ describe('tab state normalization', () => {
           diagram: 'flowchart TD\n  Start-->Done',
           createdAt: 30,
           updatedAt: 40,
+          tags: ['Product', ' Ops ', '', 42],
         },
         {
           id: 'tab-a',
@@ -57,12 +59,14 @@ describe('tab state normalization', () => {
     expect(state.tabs).toHaveLength(2);
     expect(state.tabs[0].id).toBe('tab-a');
     expect(state.tabs[0].title).toBe('Product flow');
+    expect(state.tabs[0].tags).toEqual(['product', 'ops']);
     expect(state.tabs[1]).toMatchObject({
       id: 'id-1',
       title: 'Untitled diagram',
       diagram: 'flowchart TD\n  fallback-->diagram',
       createdAt: 99,
       updatedAt: 99,
+      tags: [],
     });
     expect(state.activeTabId).toBe('tab-a');
   });
@@ -103,6 +107,7 @@ describe('tab state normalization', () => {
       diagram: 'flowchart TD\n  A-->B',
       createdAt: 77,
       updatedAt: 77,
+      tags: [],
     });
   });
 });

@@ -72,6 +72,8 @@ describe('index.html wiring', () => {
       'prompt-recipes',
       'tab-search',
       'tab-list',
+      'tab-tags',
+      'save-tab-tags',
       'add-tab',
       'duplicate-tab',
       'rename-tab',

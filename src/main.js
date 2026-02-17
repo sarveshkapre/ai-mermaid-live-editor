@@ -192,7 +192,7 @@ const PROMPT_RECIPES = [
 ];
 
 /**
- * @typedef {{id: string, title: string, diagram: string, createdAt: number, updatedAt: number}} DiagramTab
+ * @typedef {{id: string, title: string, diagram: string, createdAt: number, updatedAt: number, tags: string[]}} DiagramTab
  */
 
 /**
@@ -363,6 +363,10 @@ const promptRecipes = byId('prompt-recipes');
 const tabList = byId('tab-list');
 /** @type {HTMLInputElement} */
 const tabSearchInput = byId('tab-search');
+/** @type {HTMLInputElement} */
+const tabTagsInput = byId('tab-tags');
+/** @type {HTMLButtonElement} */
+const saveTabTagsBtn = byId('save-tab-tags');
 /** @type {HTMLButtonElement} */
 const addTabBtn = byId('add-tab');
 /** @type {HTMLButtonElement} */
@@ -1022,6 +1026,7 @@ function addImportedTab(title, diagram) {
     diagram: nextDiagram,
     createdAt: now,
     updatedAt: now,
+    tags: [],
   };
   tabs.push(newTab);
   setActiveTab(newTab.id);
@@ -1246,7 +1251,13 @@ function renderTabs() {
   tabList.innerHTML = '';
   const query = tabQuery.trim().toLowerCase();
   const visibleTabs = query
-    ? tabs.filter((tab) => tab.title.toLowerCase().includes(query))
+    ? tabs.filter((tab) => {
+        const tags = Array.isArray(tab.tags) ? tab.tags : [];
+        return (
+          tab.title.toLowerCase().includes(query) ||
+          tags.some((tag) => tag.toLowerCase().includes(query))
+        );
+      })
     : tabs;
   if (!visibleTabs.length) {
     tabList.innerHTML = '<div class="hint">No tabs match this search.</div>';
@@ -1256,7 +1267,8 @@ function renderTabs() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `tab${tab.id === activeTabId ? ' is-active' : ''}`;
-    btn.textContent = tab.title;
+    const tagSuffix = Array.isArray(tab.tags) && tab.tags.length ? ` · ${tab.tags.map((tag) => `#${tag}`).join(' ')}` : '';
+    btn.textContent = `${tab.title}${tagSuffix}`;
     btn.title = tab.title;
     btn.addEventListener('click', () => setActiveTab(tab.id));
     tabList.appendChild(btn);
@@ -1273,6 +1285,7 @@ function setActiveTab(tabId) {
   const next = getActiveTab();
   if (next) {
     editor.value = next.diagram;
+    tabTagsInput.value = Array.isArray(next.tags) ? next.tags.join(', ') : '';
     scheduleRender();
   }
   renderTabs();
@@ -1286,6 +1299,27 @@ function updateActiveTabFromEditor() {
   persistTabs();
 }
 
+function parseTagInput() {
+  return Array.from(
+    new Set(
+      tabTagsInput.value
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+        .slice(0, 8),
+    ),
+  );
+}
+
+function saveActiveTabTags() {
+  const active = getActiveTab();
+  if (!active || isReadOnly) return;
+  active.tags = parseTagInput();
+  persistTabs();
+  renderTabs();
+  showToast(`Saved ${active.tags.length} tag${active.tags.length === 1 ? '' : 's'} for "${active.title}".`);
+}
+
 function addTab() {
   if (isReadOnly) return;
   const now = Date.now();
@@ -1296,6 +1330,7 @@ function addTab() {
     diagram: DEFAULT_DIAGRAM.trim(),
     createdAt: now,
     updatedAt: now,
+    tags: [],
   };
   tabs.push(newTab);
   setActiveTab(newTab.id);
@@ -1313,6 +1348,7 @@ function duplicateTab() {
     diagram: active.diagram,
     createdAt: now,
     updatedAt: now,
+    tags: Array.isArray(active.tags) ? [...active.tags] : [],
   };
   tabs.push(newTab);
   setActiveTab(newTab.id);
@@ -1558,6 +1594,7 @@ function applyReadOnlyMode() {
     duplicateTabBtn,
     renameTabBtn,
     deleteTabBtn,
+    saveTabTagsBtn,
     undoPatchBtn,
   ];
   buttons.forEach((btn) => {
@@ -1568,6 +1605,7 @@ function applyReadOnlyMode() {
   projectOwnerInput.disabled = isReadOnly;
   projectPurposeInput.disabled = isReadOnly;
   useFilenamesToggle.disabled = isReadOnly;
+  tabTagsInput.disabled = isReadOnly;
   aiApiBaseInput.disabled = isReadOnly;
   aiModelInput.disabled = isReadOnly;
   aiApiModeSelect.disabled = isReadOnly;
@@ -3176,6 +3214,8 @@ function init() {
     });
   }
 
+  const activeTab = getActiveTab();
+  tabTagsInput.value = activeTab && Array.isArray(activeTab.tags) ? activeTab.tags.join(', ') : '';
   updateStats();
   updateLintReport();
   renderMermaid();
@@ -3217,6 +3257,14 @@ addTabBtn.addEventListener('click', addTab);
 duplicateTabBtn.addEventListener('click', duplicateTab);
 renameTabBtn.addEventListener('click', renameTab);
 deleteTabBtn.addEventListener('click', deleteTab);
+saveTabTagsBtn.addEventListener('click', saveActiveTabTags);
+tabTagsInput.addEventListener('keydown', (event) => {
+  const isCmd = event.metaKey || event.ctrlKey;
+  if (event.key === 'Enter' && !isCmd) {
+    event.preventDefault();
+    saveActiveTabTags();
+  }
+});
 
 function persistProject() {
   saveProject(getProjectPayload());
