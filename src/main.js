@@ -1249,16 +1249,7 @@ function persistTabs() {
 
 function renderTabs() {
   tabList.innerHTML = '';
-  const query = tabQuery.trim().toLowerCase();
-  const visibleTabs = query
-    ? tabs.filter((tab) => {
-        const tags = Array.isArray(tab.tags) ? tab.tags : [];
-        return (
-          tab.title.toLowerCase().includes(query) ||
-          tags.some((tag) => tag.toLowerCase().includes(query))
-        );
-      })
-    : tabs;
+  const visibleTabs = getVisibleTabs();
   if (!visibleTabs.length) {
     tabList.innerHTML = '<div class="hint">No tabs match this search.</div>';
     return;
@@ -1273,6 +1264,22 @@ function renderTabs() {
     btn.addEventListener('click', () => setActiveTab(tab.id));
     tabList.appendChild(btn);
   });
+}
+
+/**
+ * @returns {DiagramTab[]}
+ */
+function getVisibleTabs() {
+  const query = tabQuery.trim().toLowerCase();
+  return query
+    ? tabs.filter((tab) => {
+        const tags = Array.isArray(tab.tags) ? tab.tags : [];
+        return (
+          tab.title.toLowerCase().includes(query) ||
+          tags.some((tag) => tag.toLowerCase().includes(query))
+        );
+      })
+    : tabs;
 }
 
 /**
@@ -3682,6 +3689,35 @@ importUrlDialog.addEventListener('close', () => {
 
 window.addEventListener('keydown', (event) => {
   const isCmd = event.metaKey || event.ctrlKey;
+  const isEditableTarget =
+    event.target instanceof HTMLTextAreaElement ||
+    event.target instanceof HTMLInputElement ||
+    (event.target instanceof HTMLElement && event.target.isContentEditable);
+
+  if (isCmd && event.key.toLowerCase() === 'k') {
+    event.preventDefault();
+    tabSearchInput.focus();
+    tabSearchInput.select();
+    return;
+  }
+
+  if (event.altKey && !isCmd && /^[1-9]$/.test(event.key) && !isEditableTarget) {
+    const index = Number(event.key) - 1;
+    const visibleTabs = getVisibleTabs();
+    const targetTab = visibleTabs[index] || null;
+    if (targetTab) {
+      event.preventDefault();
+      setActiveTab(targetTab.id);
+    }
+  }
+
+  if (!isCmd && event.key === '/' && !isEditableTarget && !isAnyModalOpen()) {
+    event.preventDefault();
+    tabSearchInput.focus();
+    tabSearchInput.select();
+    return;
+  }
+
   if (isCmd && event.key === 'Enter') {
     event.preventDefault();
     void applyPatch();
@@ -3691,12 +3727,7 @@ window.addEventListener('keydown', (event) => {
     commitSnapshot();
   }
   if (!isCmd && event.key.toLowerCase() === 'f') {
-    const target = event.target;
-    const isEditable =
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLInputElement ||
-      (target instanceof HTMLElement && target.isContentEditable);
-    if (!isEditable) {
+    if (!isEditableTarget) {
       event.preventDefault();
       toggleFocusMode();
     }
@@ -3706,24 +3737,14 @@ window.addEventListener('keydown', (event) => {
     toggleFocusMode(false);
   }
   if (!isCmd && event.key === '?' && !shortcutsDialog.open) {
-    const target = event.target;
-    const isEditable =
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLInputElement ||
-      (target instanceof HTMLElement && target.isContentEditable);
-    if (!isEditable) {
+    if (!isEditableTarget) {
       event.preventDefault();
       openShortcuts();
     }
   }
 
   if (!isCmd && event.key.toLowerCase() === 'p' && !isAnyModalOpen()) {
-    const target = event.target;
-    const isEditable =
-      target instanceof HTMLTextAreaElement ||
-      target instanceof HTMLInputElement ||
-      (target instanceof HTMLElement && target.isContentEditable);
-    if (!isEditable) {
+    if (!isEditableTarget) {
       event.preventDefault();
       openPresentationMode();
     }
