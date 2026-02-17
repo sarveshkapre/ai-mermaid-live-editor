@@ -20,6 +20,20 @@ function createMemoryStorage() {
   };
 }
 
+function createThrowingStorage() {
+  return {
+    getItem() {
+      throw new Error('blocked');
+    },
+    setItem() {
+      throw new Error('blocked');
+    },
+    removeItem() {
+      throw new Error('blocked');
+    },
+  };
+}
+
 describe('draft storage', () => {
   test('saveDraft refuses empty input', () => {
     const storage = createMemoryStorage();
@@ -50,5 +64,12 @@ describe('draft storage', () => {
     expect(loadDraft(/** @type {any} */ (storage))?.diagram).toBe('a');
     clearDraft(/** @type {any} */ (storage));
     expect(loadDraft(/** @type {any} */ (storage))).toBe(null);
+  });
+
+  test('gracefully handles storage access errors', () => {
+    const storage = createThrowingStorage();
+    expect(loadDraft(/** @type {any} */ (storage))).toBe(null);
+    expect(saveDraft('a-->b', /** @type {any} */ (storage))).toBe(false);
+    expect(() => clearDraft(/** @type {any} */ (storage))).not.toThrow();
   });
 });

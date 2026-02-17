@@ -9,7 +9,12 @@ const STORAGE_KEY = 'ai-mermaid-draft';
  * @returns {Draft | null}
  */
 export function loadDraft(storage = localStorage) {
-  const raw = storage.getItem(STORAGE_KEY);
+  let raw = null;
+  try {
+    raw = storage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
@@ -32,13 +37,21 @@ export function saveDraft(diagram, storage = localStorage) {
   if (!trimmed) return false;
   /** @type {Draft} */
   const payload = { diagram: trimmed, updatedAt: Date.now() };
-  storage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  return true;
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
  * @param {Storage} storage
  */
 export function clearDraft(storage = localStorage) {
-  storage.removeItem(STORAGE_KEY);
+  try {
+    storage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage write errors (e.g. quota/private mode).
+  }
 }
