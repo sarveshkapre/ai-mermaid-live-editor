@@ -309,3 +309,18 @@ Structured, append-only notes for decisions and learnings that should persist ac
 ## Verification Evidence (2026-02-17 cycle 1)
 - `make check` -> fail (`npm run typecheck` reported two errors in `src/main.js`: nullable template-array narrowing and a snapshot tab object missing required `tags`).
 - `make check` -> pass (lint, typecheck, tests, build, and audit all successful).
+
+### 2026-02-17: Migrate CI to self-hosted runner
+- Decision: Switch `.github/workflows/ci.yml` from `ubuntu-latest` to `runs-on: self-hosted` and make the workflow steps explicit (`npm run lint/typecheck/test/build/audit`) for self-hosted portability.
+- Why: GitHub-hosted jobs are blocked by billing constraints; the repository needs a runner configuration that executes on repository-managed infrastructure.
+- Evidence: `.github/workflows/ci.yml`, `docs/self-hosted-runner.md`, `README.md`.
+- Confidence: high
+- Trust label: local verification
+
+## Verification Evidence (2026-02-17 self-hosted runner migration)
+- `npm ci` -> pass
+- `npm run lint` -> pass
+- `npm run typecheck` -> pass
+- `npm run test` -> pass (12 files, 40 tests)
+- `npm run build` -> pass
+- `npm run audit` -> pass (`high=0`, `critical=0`)
